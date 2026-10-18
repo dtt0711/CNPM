@@ -1,17 +1,46 @@
 import { useEffect, useRef } from "react";
-import maplibregl, { Map as MapLibreMap, Marker } from "maplibre-gl";
+import maplibregl, { Map as MapLibreMap, Marker, Popup } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useTranslation } from "react-i18next";
 import type { PlaceDto } from "../api/types";
 
-const DEFAULT_STYLE_URL = "https://demotiles.maplibre.org/style.json";
-const HCMC_CENTER: [number, number] = [106.700981, 10.776889]; // Ben Thanh market area.
+/** Clear street map (OpenFreeMap Liberty) — readable labels for HCMC. */
+const DEFAULT_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+const HCMC_CENTER: [number, number] = [106.700981, 10.776889];
 
 export interface MapViewProps {
   places: PlaceDto[];
   selectedPlaceId: string | null;
   onSelectPlace: (placeId: string) => void;
   userPosition: { lat: number; lng: number } | null;
+}
+
+function resolveMapStyle(): string | maplibregl.StyleSpecification {
+  const configured = (import.meta.env.VITE_MAP_TILE_URL as string | undefined)?.trim();
+  if (!configured) return DEFAULT_STYLE_URL;
+
+  // Full MapLibre style JSON URL
+  if (configured.includes("style") || configured.endsWith(".json")) {
+    return configured;
+  }
+
+  // Raster tile template e.g. https://tile.openstreetmap.org/{z}/{x}/{y}.png
+  if (configured.includes("{z}") && configured.includes("{x}")) {
+    return {
+      version: 8,
+      sources: {
+        osm: {
+          type: "raster",
+          tiles: [configured],
+          tileSize: 256,
+          attribution: "© OpenStreetMap",
+        },
+      },
+      layers: [{ id: "osm", type: "raster", source: "osm" }],
+    };
+  }
+
+  return configured;
 }
 
 export function MapView({ places, selectedPlaceId, onSelectPlace, userPosition }: MapViewProps) {
@@ -21,23 +50,33 @@ export function MapView({ places, selectedPlaceId, onSelectPlace, userPosition }
   const markersRef = useRef<Map<string, Marker>>(new Map());
   const userMarkerRef = useRef<Marker | null>(null);
   const onSelectRef = useRef(onSelectPlace);
+  const placesRef = useRef(places);
   onSelectRef.current = onSelectPlace;
+  placesRef.current = places;
 
-  // Create the map instance once.
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    const tileUrl = import.meta.env.VITE_MAP_TILE_URL || DEFAULT_STYLE_URL;
-
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: tileUrl,
+      style: resolveMapStyle(),
       center: HCMC_CENTER,
-      zoom: 12.5,
+      zoom: 12.2,
     });
 
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+    map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
+    map.addControl(new maplibregl.ScaleControl({ maxWidth: 120 }), "bottom-left");
     mapRef.current = map;
+
+    map.on("load", () => {
+      // Fit all places once markers exist
+      const list = placesRef.current;
+      if (list.length > 0) {
+        const bounds = new maplibregl.LngLatBounds();
+        for (const p of list) bounds.extend([p.longitude, p.latitude]);
+        map.fitBounds(bounds, { padding: 56, maxZoom: 13.5, duration: 0 });
+      }
+    });
 
     return () => {
       map.remove();
@@ -45,7 +84,6 @@ export function MapView({ places, selectedPlaceId, onSelectPlace, userPosition }
     };
   }, []);
 
-  // Sync place markers whenever the list changes.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -60,28 +98,47 @@ export function MapView({ places, selectedPlaceId, onSelectPlace, userPosition }
       }
     }
 
-    for (const place of places) {
-      if (existing.has(place.id)) continue;
+    places.forEach((place, index) => {
+      const order = index + 1;
+      let marker = existing.get(place.id);
 
-      const el = document.createElement("button");
-      el.type = "button";
-      el.className = "map-pin";
-      el.setAttribute("aria-label", place.name);
-      el.innerHTML = `<span class="map-pin__dot"></span>`;
-      el.addEventListener("click", (evt) => {
-        evt.stopPropagation();
-        onSelectRef.current(place.id);
-      });
+      if (!marker) {
+        const el = document.createElement("button");
+        el.type = "button";
+        el.className = "map-pin";
+        el.setAttribute("aria-label", place.name);
+        el.innerHTML = `<span class="map-pin__badge">${order}</span><span class="map-pin__label">${escapeHtml(place.name)}</span>`;
+        el.addEventListener("click", (evt) => {
+          evt.stopPropagation();
+          onSelectRef.current(place.id);
+        });
 
-      const marker = new maplibregl.Marker({ element: el, anchor: "bottom" })
-        .setLngLat([place.longitude, place.latitude])
-        .addTo(map);
+        const popup = new Popup({ offset: 18, closeButton: false, maxWidth: "240px" }).setHTML(
+          `<strong>${escapeHtml(place.name)}</strong><br/><span class="map-popup-meta">${escapeHtml(place.district)} · ${escapeHtml(place.category)}</span>`,
+        );
 
-      existing.set(place.id, marker);
+        marker = new maplibregl.Marker({ element: el, anchor: "bottom" })
+          .setLngLat([place.longitude, place.latitude])
+          .setPopup(popup)
+          .addTo(map);
+
+        existing.set(place.id, marker);
+      } else {
+        marker.setLngLat([place.longitude, place.latitude]);
+        const badge = marker.getElement().querySelector(".map-pin__badge");
+        if (badge) badge.textContent = String(order);
+      }
+    });
+
+    if (places.length > 0 && map.isStyleLoaded()) {
+      const bounds = new maplibregl.LngLatBounds();
+      for (const p of places) bounds.extend([p.longitude, p.latitude]);
+      if (!selectedPlaceId) {
+        map.fitBounds(bounds, { padding: 56, maxZoom: 13.5, duration: 600 });
+      }
     }
-  }, [places]);
+  }, [places, selectedPlaceId]);
 
-  // Highlight the selected place and fly to it.
   useEffect(() => {
     for (const [id, marker] of markersRef.current) {
       marker.getElement().classList.toggle("map-pin--active", id === selectedPlaceId);
@@ -89,11 +146,11 @@ export function MapView({ places, selectedPlaceId, onSelectPlace, userPosition }
     if (!selectedPlaceId || !mapRef.current) return;
     const place = places.find((p) => p.id === selectedPlaceId);
     if (place) {
-      mapRef.current.flyTo({ center: [place.longitude, place.latitude], zoom: 15.5, duration: 700 });
+      mapRef.current.flyTo({ center: [place.longitude, place.latitude], zoom: 15.2, duration: 700 });
+      markersRef.current.get(selectedPlaceId)?.togglePopup();
     }
   }, [selectedPlaceId, places]);
 
-  // Track the user's live location marker.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !userPosition) return;
@@ -101,6 +158,7 @@ export function MapView({ places, selectedPlaceId, onSelectPlace, userPosition }
     if (!userMarkerRef.current) {
       const el = document.createElement("div");
       el.className = "map-pin map-pin--user";
+      el.title = "You";
       userMarkerRef.current = new maplibregl.Marker({ element: el, anchor: "center" })
         .setLngLat([userPosition.lng, userPosition.lat])
         .addTo(map);
@@ -114,4 +172,12 @@ export function MapView({ places, selectedPlaceId, onSelectPlace, userPosition }
       <div ref={containerRef} className="map-view__canvas" aria-label={t("map.loading")} />
     </div>
   );
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
 }

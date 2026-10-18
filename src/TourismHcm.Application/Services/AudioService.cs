@@ -254,6 +254,17 @@ public sealed class AudioService : IAudioService
                 throw new ProviderUnavailableException(_ttsProvider.ProviderName, "Text-to-speech provider is not configured.");
             }
 
+            // Fake TTS is silent — do not store "Ready" MP3 that would block client Web Speech.
+            if (string.Equals(_ttsProvider.ProviderName, "Fake", StringComparison.OrdinalIgnoreCase))
+            {
+                task.Status = AudioTaskStatus.Failed;
+                task.Error = "Fake TTS produces no audible audio; clients should use Web Speech API.";
+                task.CompletedAt = DateTimeOffset.UtcNow;
+                task.UpdatedAt = DateTimeOffset.UtcNow;
+                await _unitOfWork.SaveChangesAsync(ct);
+                return;
+            }
+
             var audioBytes = await _ttsProvider.SynthesizeAsync(text, task.Lang, ct);
             var path = await _audioStorage.SaveAsync(task.PlaceId, task.Lang, task.ContentHash, audioBytes, ct);
             var durationSec = EstimateDurationSeconds(text);

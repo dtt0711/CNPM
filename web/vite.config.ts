@@ -107,8 +107,13 @@ export default defineConfig({
   ],
   server: {
     proxy: {
+      // Prefer local `dotnet run` (5020). For Docker API: set env VITE_API_PROXY_TARGET=http://localhost:8080
       "/api": {
-        target: "http://localhost:8080",
+        target: "http://localhost:5020",
+        changeOrigin: true,
+      },
+      "/audio": {
+        target: "http://localhost:5020",
         changeOrigin: true,
       },
     },

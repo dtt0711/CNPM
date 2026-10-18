@@ -1,18 +1,13 @@
 // AudioPlayer
 // -----------
-// Plays narration audio with a 4-tier fallback chain:
-//   1. ready audio URL          - narration.audio.available && .url -> play directly.
-//   2. wait for task / poll     - audio still generating -> poll the task status
-//                                  endpoint until it becomes ready (or times out).
-//   3. POST /audio/tts (stream) - request on-the-fly synthesis; play the
-//                                  resulting stream/URL if the backend returns one.
-//   4. Web Speech API           - last resort: synthesize client-side with
-//                                  `speechSynthesis` so the user always hears something.
+// Plays narration with fallback:
+//   1. ready server audio URL (real MP3 from Azure / prior generation)
+//   2. Web Speech API when narration text is present (needed for Fake/no-key demos;
+//      also recovers when silent/broken server audio would otherwise "succeed")
+//   3. poll in-progress generation task
+//   4. POST /audio/tts then play result
 //
-// `resolveNarrationPlayback` is the pure, fully-injectable decision function
-// used by the tests. `AudioPlayer` is a thin class that wires it up to real
-// browser APIs (HTMLAudioElement, fetch via the api client, speechSynthesis)
-// for use from React components/hooks.
+// Pure logic lives in `playNarrationWithFallback` for vitest; `AudioPlayer` wires browsers.
 
 export interface AudioInfoLike {
   available: boolean;
@@ -37,19 +32,14 @@ export interface PlaybackCancelToken {
 const PENDING_STATUSES = new Set(["pending", "running", "queued", "processing"]);
 
 export interface AudioPlayerDeps {
-  /** Plays an already-resolved audio URL/blob-URL to completion. */
   playUrl: (url: string) => Promise<void>;
-  /** Polls backend task status for the given place+lang; returns updated audio info or null if unknown. */
   pollTaskStatus: (params: { placeId: string; lang: string }) => Promise<AudioInfoLike | null>;
-  /** Requests on-the-fly TTS; resolves with a playable URL, or null if unavailable. */
   requestTtsStream: (params: {
     placeId: string;
     lang: string;
     text: string;
   }) => Promise<{ url: string } | null>;
-  /** Client-side speech synthesis fallback. */
   speak: (text: string, lang: string) => Promise<void>;
-  /** Awaitable delay, injectable so tests don't need real timers. */
   wait?: (ms: number) => Promise<void>;
   now?: () => number;
   pollIntervalMs?: number;
@@ -66,7 +56,25 @@ function isTerminalFailure(status?: string): boolean {
   return !!status && status.toLowerCase() === "failed";
 }
 
-/** Polls `pollTaskStatus` until audio is ready, it fails, the timeout elapses, or cancellation. */
+/** Map app lang codes to BCP-47 tags browsers understand for speechSynthesis. */
+export function toSpeechLocale(lang: string): string {
+  const code = lang.trim().toLowerCase().split("-")[0];
+  switch (code) {
+    case "vi":
+      return "vi-VN";
+    case "en":
+      return "en-US";
+    case "ja":
+      return "ja-JP";
+    case "ko":
+      return "ko-KR";
+    case "zh":
+      return "zh-CN";
+    default:
+      return lang || "vi-VN";
+  }
+}
+
 export async function pollUntilReady(
   narration: NarrationLike,
   deps: AudioPlayerDeps,
@@ -94,27 +102,53 @@ export async function pollUntilReady(
 }
 
 /**
- * Pure fallback-resolution logic: tries each tier in order and returns which
- * tier succeeded (or "none"). All I/O is injected via `deps`, so this is
- * fully unit-testable without a real DOM/audio element/network.
+ * Tries each playback tier. Web Speech is attempted early whenever text exists so
+ * Development/Fake (silent MP3) demos still produce audible narration on a user click.
  */
 export async function playNarrationWithFallback(
   narration: NarrationLike,
   deps: AudioPlayerDeps,
   token?: PlaybackCancelToken,
 ): Promise<FallbackTier> {
-  // Tier 1: ready audio URL.
+  // In Vite dev (and when VITE_PREFER_WEB_SPEECH=true), prefer Web Speech before
+  // server MP3 — Fake TTS produces silent files that otherwise "play" with no sound.
+  if (token?.cancelled) return "none";
+
+  const preferWebSpeechFirst =
+    (typeof import.meta !== "undefined" &&
+      (Boolean(import.meta.env?.DEV) || import.meta.env?.VITE_PREFER_WEB_SPEECH === "true")) ||
+    false;
+
+  if (preferWebSpeechFirst && narration.text?.trim()) {
+    try {
+      await deps.speak(narration.text, toSpeechLocale(narration.lang));
+      return "web-speech";
+    } catch {
+      // fall through to server audio tiers
+    }
+  }
+  if (token?.cancelled) return "none";
+
   if (narration.audio.available && narration.audio.url) {
     try {
       await deps.playUrl(narration.audio.url);
       return "ready-url";
     } catch {
-      // fall through to the next tier.
+      // fall through
     }
   }
   if (token?.cancelled) return "none";
 
-  // Tier 2: wait for an in-progress generation task to finish.
+  if (!preferWebSpeechFirst && narration.text?.trim()) {
+    try {
+      await deps.speak(narration.text, toSpeechLocale(narration.lang));
+      return "web-speech";
+    } catch {
+      // fall through to server TTS tiers
+    }
+  }
+  if (token?.cancelled) return "none";
+
   if (isPending(narration.audio.status)) {
     const polled = await pollUntilReady(narration, deps, token);
     if (token?.cancelled) return "none";
@@ -123,13 +157,12 @@ export async function playNarrationWithFallback(
         await deps.playUrl(polled.url);
         return "poll-task";
       } catch {
-        // fall through.
+        // fall through
       }
     }
   }
   if (token?.cancelled) return "none";
 
-  // Tier 3: request on-demand synthesis (streamed or queued).
   try {
     const stream = await deps.requestTtsStream({
       placeId: narration.placeId,
@@ -142,22 +175,22 @@ export async function playNarrationWithFallback(
       return "tts-stream";
     }
   } catch {
-    // fall through.
+    // fall through
   }
   if (token?.cancelled) return "none";
 
-  // Tier 4: client-side Web Speech API, last resort.
-  try {
-    await deps.speak(narration.text, narration.lang);
-    return "web-speech";
-  } catch {
-    return "none";
+  // Last retry of Web Speech if earlier attempt failed.
+  if (narration.text?.trim()) {
+    try {
+      await deps.speak(narration.text, toSpeechLocale(narration.lang));
+      return "web-speech";
+    } catch {
+      return "none";
+    }
   }
-}
 
-// ---------------------------------------------------------------------------
-// Browser-backed implementation used by the app at runtime.
-// ---------------------------------------------------------------------------
+  return "none";
+}
 
 import { api, apiAudioUrl } from "../api/client";
 
@@ -168,7 +201,6 @@ export class AudioPlayer {
 
   constructor(private readonly onTierChange?: (tier: FallbackTier) => void) {}
 
-  /** Cancels any in-flight playback/polling/speech and stops current audio. */
   stop(): void {
     this.token.cancelled = true;
     this.token = { cancelled: false };
@@ -194,7 +226,6 @@ export class AudioPlayer {
         if (!task) return null;
         const status = task.status;
         if (status?.toLowerCase() === "done") {
-          // Done tasks don't carry a URL directly; re-fetch narration text/audio.
           const refreshed = await api.getNarration(placeId, lang);
           return refreshed.audio;
         }
@@ -205,7 +236,6 @@ export class AudioPlayer {
         if (result.kind === "stream") {
           return { url: URL.createObjectURL(result.blob) };
         }
-        // Returned a queued task - poll briefly for it to complete.
         const info = await pollUntilReady(narration, deps, token);
         return info?.url ? { url: info.url } : null;
       },
@@ -233,12 +263,32 @@ export class AudioPlayer {
         reject(new Error("Web Speech API unavailable"));
         return;
       }
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = lang;
-      utterance.onend = () => resolve();
-      utterance.onerror = () => reject(new Error("Speech synthesis failed"));
-      this.utterance = utterance;
-      window.speechSynthesis.speak(utterance);
+
+      // Chrome often needs voices loaded asynchronously.
+      const start = () => {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = lang;
+        const voices = window.speechSynthesis.getVoices();
+        const match = voices.find((v) => v.lang.toLowerCase().startsWith(lang.toLowerCase().slice(0, 2)));
+        if (match) utterance.voice = match;
+        utterance.onend = () => resolve();
+        utterance.onerror = () => reject(new Error("Speech synthesis failed"));
+        this.utterance = utterance;
+        window.speechSynthesis.speak(utterance);
+      };
+
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length === 0) {
+        window.speechSynthesis.onvoiceschanged = () => {
+          window.speechSynthesis.onvoiceschanged = null;
+          start();
+        };
+        // Fallback if event never fires
+        setTimeout(start, 250);
+      } else {
+        start();
+      }
     });
   }
 }

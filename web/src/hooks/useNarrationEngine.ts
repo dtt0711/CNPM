@@ -5,14 +5,25 @@ import { useGeolocationWatcher, type GeolocationStatus } from "./useGeolocationW
 import { GeofenceEngine, type NarrationEvent, type NarrationLike } from "../engine/GeofenceEngine";
 import { AudioPlayer, type FallbackTier } from "../audio/AudioPlayer";
 
+export interface UserPosition {
+  lat: number;
+  lng: number;
+}
+
+/** Independence Palace — handy for demos without going on-site. */
+export const DEMO_POSITION: UserPosition = { lat: 10.7769, lng: 106.6959 };
+
 export interface NarrationState {
   narration: NarrationLike | null;
   source: "geofence" | "on-demand" | null;
   tier: FallbackTier | "loading" | "idle";
   geofenceStatus: GeolocationStatus;
+  userPosition: UserPosition | null;
   error: string | null;
   enableGeofence: () => void;
   disableGeofence: () => void;
+  /** Feed a fake GPS fix (e.g. standing at a landmark) to trigger geofence logic. */
+  simulatePosition: (position: UserPosition) => void;
   playPlace: (placeId: string) => void;
   stop: () => void;
 }
@@ -24,6 +35,7 @@ export function useNarrationEngine(lang: string): NarrationState {
   const [source, setSource] = useState<"geofence" | "on-demand" | null>(null);
   const [tier, setTier] = useState<FallbackTier | "loading" | "idle">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [userPosition, setUserPosition] = useState<UserPosition | null>(null);
 
   const playerRef = useRef<AudioPlayer | null>(null);
   const engineRef = useRef<GeofenceEngine | null>(null);
@@ -36,19 +48,40 @@ export function useNarrationEngine(lang: string): NarrationState {
     engineRef.current = new GeofenceEngine({
       clientId,
       initialLang: lang,
+      // Shorter waits for local demos (still respects server cooldown).
+      debounceMs: 800,
+      throttleMs: 1500,
       fetchTrigger: ({ lat, lng, lang: l, clientId: cid }) =>
         api.trigger({ latitude: lat, longitude: lng, lang: l, clientId: cid }),
-      fetchNarration: ({ placeId, lang: l }) => api.getNarration(placeId, l),
+      fetchNarration: async ({ placeId, lang: l }) => {
+        const n = await api.getNarration(placeId, l);
+        return {
+          placeId: n.placeId,
+          name: n.name,
+          requestedLang: n.requestedLang,
+          actualLang: n.actualLang,
+          isFallback: n.isFallback,
+          text: n.text,
+          audio: n.audio,
+        };
+      },
       onNarration: (event: NarrationEvent) => {
         setNarration(event.narration);
         setSource(event.source);
         setTier("loading");
         setError(null);
-        // Prefer actualLang so Web Speech matches fallback text (e.g. vi/en when ja missing).
         const speakLang = event.narration.actualLang || event.lang;
-        playerRef.current?.play({ ...event.narration, lang: speakLang }).catch(() => {
-          setError("playback-error");
-        });
+        playerRef.current
+          ?.play({
+            placeId: event.narration.placeId,
+            lang: speakLang,
+            text: event.narration.text,
+            audio: event.narration.audio,
+          })
+          .catch(() => {
+            setError("playback-error");
+            setTier("none");
+          });
       },
       onError: (err) => {
         setError(err instanceof Error ? err.message : "geofence-error");
@@ -68,8 +101,14 @@ export function useNarrationEngine(lang: string): NarrationState {
   }, []);
 
   const { status: geofenceStatus, start, stop: stopWatching } = useGeolocationWatcher((position) => {
+    setUserPosition({ lat: position.lat, lng: position.lng });
     engineRef.current?.onPosition(position);
   });
+
+  const simulatePosition = useCallback((position: UserPosition) => {
+    setUserPosition(position);
+    engineRef.current?.onPosition({ ...position, timestamp: Date.now() });
+  }, []);
 
   const playPlace = useCallback((placeId: string) => {
     setTier("loading");
@@ -87,9 +126,11 @@ export function useNarrationEngine(lang: string): NarrationState {
     source,
     tier,
     geofenceStatus,
+    userPosition,
     error,
     enableGeofence: start,
     disableGeofence: stopWatching,
+    simulatePosition,
     playPlace,
     stop,
   };

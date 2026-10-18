@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { usePlaces } from "./hooks/usePlaces";
-import { useNarrationEngine } from "./hooks/useNarrationEngine";
+import { DEMO_POSITION, useNarrationEngine } from "./hooks/useNarrationEngine";
 import { setUiLanguage, type UiLang } from "./i18n";
 import { MapView } from "./components/MapView";
 import { PlaceList } from "./components/PlaceList";
@@ -24,8 +24,10 @@ export default function App() {
     tier,
     error: narrationError,
     geofenceStatus,
+    userPosition,
     enableGeofence,
     disableGeofence,
+    simulatePosition,
     playPlace,
     stop,
   } = useNarrationEngine(lang);
@@ -70,6 +72,7 @@ export default function App() {
       {narration && (
         <div className="app__banner">
           {t("geofence.newNarration", { name: narration.name ?? narration.placeId })}
+          {tier === "web-speech" && ` · ${t("audio.status.web-speech")}`}
         </div>
       )}
       {narrationError && (
@@ -106,7 +109,7 @@ export default function App() {
               places={places}
               selectedPlaceId={selectedPlaceId}
               onSelectPlace={setSelectedPlaceId}
-              userPosition={null}
+              userPosition={userPosition}
             />
           </section>
         )}
@@ -119,6 +122,14 @@ export default function App() {
           onClick={() => (geofenceActive ? disableGeofence() : enableGeofence())}
         >
           {geofenceActive ? t("geofence.disable") : t("geofence.enable")}
+        </button>
+        <button
+          type="button"
+          className="btn btn--primary"
+          onClick={() => simulatePosition(DEMO_POSITION)}
+          title={t("geofence.simulateHint")}
+        >
+          {t("geofence.simulate")}
         </button>
         <span className="app__status">
           {geofenceStatus === "watching" && t("geofence.watching")}

@@ -63,7 +63,9 @@
     "disable": "Disable location suggestions",
     "unsupported": "This device does not support geolocation.",
     "permissionDenied": "Location access was not granted.",
-    "newNarration": "Nearby place detected: {{name}}"
+    "newNarration": "Nearby place detected: {{name}}",
+    "simulate": "Simulate at Independence Palace",
+    "simulateHint": "Fake GPS at Independence Palace to try narration without real GPS"
   },
   "map": {
     "loading": "Loading map...",

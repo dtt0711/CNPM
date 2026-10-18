@@ -30,7 +30,7 @@ export function usePlaces(pageSize = 100): UsePlacesState {
     setError(null);
 
     api
-      .listPlaces({ page: 1, pageSize, status: "Published" }, controller.signal)
+      .listPlaces({ page: 1, pageSize }, controller.signal)
       .then((result) => {
         if (!active) return;
         setPlaces(result.items);

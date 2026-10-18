@@ -63,7 +63,9 @@
     "disable": "Tắt gợi ý theo vị trí",
     "unsupported": "Thiết bị không hỗ trợ định vị.",
     "permissionDenied": "Bạn chưa cho phép truy cập vị trí.",
-    "newNarration": "Phát hiện điểm gần bạn: {{name}}"
+    "newNarration": "Phát hiện điểm gần bạn: {{name}}",
+    "simulate": "Giả lập tại Dinh Độc Lập",
+    "simulateHint": "Đặt vị trí giả tại Dinh Độc Lập để thử thuyết minh (không cần GPS thật)"
   },
   "map": {
     "loading": "Đang tải bản đồ...",

@@ -131,7 +131,9 @@ button {
 
 .app__map-pane {
   position: relative;
-  min-height: 320px;
+  min-height: min(70vh, 640px);
+  height: calc(100vh - 140px);
+  background: #dbeafe;
 }
 
 .app__footer-bar {
@@ -440,37 +442,78 @@ button {
 }
 
 .map-pin {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
   border: none;
-  background: var(--color-primary);
-  box-shadow: 0 0 0 4px rgba(23, 162, 160, 0.25), var(--shadow-pop);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
+}
+
+.map-pin__badge {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #0e7490;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  padding: 0;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px rgba(14, 116, 144, 0.35);
 }
 
-.map-pin__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #06222b;
+.map-pin__label {
+  max-width: 120px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #0f172a;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 1px solid rgba(15, 23, 42, 0.12);
 }
 
-.map-pin--active {
-  background: var(--color-accent);
-  box-shadow: 0 0 0 6px rgba(244, 185, 66, 0.3), var(--shadow-pop);
+.map-pin--active .map-pin__badge {
+  background: #d97706;
+  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.4);
+  transform: scale(1.12);
+}
+
+.map-pin--active .map-pin__label {
+  background: #fffbeb;
+  border-color: #d97706;
 }
 
 .map-pin--user {
-  width: 16px;
-  height: 16px;
-  background: var(--color-success);
-  box-shadow: 0 0 0 6px rgba(79, 209, 165, 0.3);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #22c55e;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.35);
   cursor: default;
+}
+
+.maplibregl-popup-content {
+  padding: 8px 10px;
+  font-size: 0.8rem;
+  color: #0f172a;
+}
+
+.map-popup-meta {
+  color: #64748b;
+  font-size: 0.72rem;
 }
 
 @keyframes fade-in {

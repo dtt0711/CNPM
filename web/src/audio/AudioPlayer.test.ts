@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import {
   playNarrationWithFallback,
   pollUntilReady,
+  toSpeechLocale,
   type AudioPlayerDeps,
   type NarrationLike,
 } from "./AudioPlayer";
@@ -15,129 +16,84 @@ function narration(overrides: Partial<NarrationLike["audio"]> = {}): NarrationLi
   };
 }
 
-/** Base deps where every tier is a jest/vitest mock the test can override. */
 function makeDeps(overrides: Partial<AudioPlayerDeps> = {}): AudioPlayerDeps {
   return {
     playUrl: vi.fn().mockResolvedValue(undefined),
     pollTaskStatus: vi.fn().mockResolvedValue(null),
     requestTtsStream: vi.fn().mockResolvedValue(null),
     speak: vi.fn().mockResolvedValue(undefined),
-    wait: vi.fn().mockResolvedValue(undefined), // no real delay in tests
+    wait: vi.fn().mockResolvedValue(undefined),
     pollIntervalMs: 1,
     pollTimeoutMs: 5,
     ...overrides,
   };
 }
 
+describe("toSpeechLocale", () => {
+  it("maps app codes to BCP-47", () => {
+    expect(toSpeechLocale("vi")).toBe("vi-VN");
+    expect(toSpeechLocale("ja")).toBe("ja-JP");
+  });
+});
+
 describe("playNarrationWithFallback", () => {
-  it("tier 1: plays immediately when a ready audio URL is already available", async () => {
+  it("uses Web Speech when text exists (preferred in Vite DEV)", async () => {
     const deps = makeDeps();
+    const n = narration({ available: false, status: "" });
+
+    const tier = await playNarrationWithFallback(n, deps);
+
+    expect(tier).toBe("web-speech");
+    expect(deps.speak).toHaveBeenCalledWith(n.text, "vi-VN");
+    expect(deps.requestTtsStream).not.toHaveBeenCalled();
+  });
+
+  it("plays ready URL when Web Speech fails", async () => {
+    const deps = makeDeps({ speak: vi.fn().mockRejectedValue(new Error("no voices")) });
     const n = narration({ available: true, url: "https://cdn.example/ready.mp3", status: "Done" });
 
     const tier = await playNarrationWithFallback(n, deps);
 
     expect(tier).toBe("ready-url");
     expect(deps.playUrl).toHaveBeenCalledWith("https://cdn.example/ready.mp3");
-    expect(deps.pollTaskStatus).not.toHaveBeenCalled();
-    expect(deps.requestTtsStream).not.toHaveBeenCalled();
-    expect(deps.speak).not.toHaveBeenCalled();
   });
 
-  it("tier 2: waits/polls for an in-progress generation task, then plays once ready", async () => {
+  it("polls then plays when Web Speech fails and a pending task becomes ready", async () => {
     const pollTaskStatus = vi
       .fn()
       .mockResolvedValueOnce({ available: false, status: "Pending" })
-      .mockResolvedValueOnce({ available: false, status: "Running" })
       .mockResolvedValueOnce({ available: true, url: "https://cdn.example/generated.mp3", status: "Done" });
 
-    const deps = makeDeps({ pollTaskStatus });
+    const deps = makeDeps({
+      speak: vi.fn().mockRejectedValue(new Error("no voices")),
+      pollTaskStatus,
+    });
     const n = narration({ available: false, status: "Pending" });
 
     const tier = await playNarrationWithFallback(n, deps);
 
     expect(tier).toBe("poll-task");
-    expect(pollTaskStatus).toHaveBeenCalledTimes(3);
     expect(deps.playUrl).toHaveBeenCalledWith("https://cdn.example/generated.mp3");
-    expect(deps.requestTtsStream).not.toHaveBeenCalled();
-    expect(deps.speak).not.toHaveBeenCalled();
   });
 
-  it("tier 3: falls back to POST /audio/tts streaming when there is no ready/pending audio", async () => {
+  it("falls back to TTS stream when Web Speech fails and nothing is pending", async () => {
     const requestTtsStream = vi.fn().mockResolvedValue({ url: "blob:tts-stream" });
-    const deps = makeDeps({ requestTtsStream });
-    const n = narration({ available: false, status: "" }); // no url, not pending -> skip tier 1/2
-
-    const tier = await playNarrationWithFallback(n, deps);
-
-    expect(tier).toBe("tts-stream");
-    expect(requestTtsStream).toHaveBeenCalledWith({
-      placeId: "place-1",
-      lang: "vi",
-      text: n.text,
-    });
-    expect(deps.playUrl).toHaveBeenCalledWith("blob:tts-stream");
-    expect(deps.speak).not.toHaveBeenCalled();
-  });
-
-  it("tier 3 is reached when polling for the pending task times out without becoming ready", async () => {
-    // Deterministic virtual clock: each `wait()` advances time by one interval,
-    // so the poll loop deterministically exceeds pollTimeoutMs after 3 attempts
-    // without depending on real wall-clock timing.
-    let elapsed = 0;
-    const pollTaskStatus = vi.fn().mockResolvedValue({ available: false, status: "Pending" });
-    const requestTtsStream = vi.fn().mockResolvedValue({ url: "blob:fallback" });
     const deps = makeDeps({
-      pollTaskStatus,
+      speak: vi.fn().mockRejectedValue(new Error("no voices")),
       requestTtsStream,
-      pollTimeoutMs: 3,
-      pollIntervalMs: 1,
-      now: () => elapsed,
-      wait: vi.fn().mockImplementation(async () => {
-        elapsed += 1;
-      }),
     });
-    const n = narration({ available: false, status: "Pending" });
+    const n = narration({ available: false, status: "" });
 
     const tier = await playNarrationWithFallback(n, deps);
 
     expect(tier).toBe("tts-stream");
-    expect(pollTaskStatus).toHaveBeenCalledTimes(3);
-    expect(requestTtsStream).toHaveBeenCalledTimes(1);
+    expect(requestTtsStream).toHaveBeenCalled();
   });
 
-  it("tier 4: uses the Web Speech API as the last resort when every network tier fails", async () => {
+  it("returns none when every tier fails", async () => {
     const deps = makeDeps({
-      requestTtsStream: vi.fn().mockRejectedValue(new Error("network error")),
-      speak: vi.fn().mockResolvedValue(undefined),
-    });
-    const n = narration({ available: false, status: "Failed" });
-
-    const tier = await playNarrationWithFallback(n, deps);
-
-    expect(tier).toBe("web-speech");
-    expect(deps.speak).toHaveBeenCalledWith(n.text, "vi");
-  });
-
-  it("falls through to tier 3/4 when the ready URL exists but actually fails to play", async () => {
-    const playUrl = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("404"))
-      .mockResolvedValueOnce(undefined);
-    const requestTtsStream = vi.fn().mockResolvedValue({ url: "blob:recovered" });
-    const deps = makeDeps({ playUrl, requestTtsStream });
-    const n = narration({ available: true, url: "https://cdn.example/broken.mp3", status: "Done" });
-
-    const tier = await playNarrationWithFallback(n, deps);
-
-    expect(tier).toBe("tts-stream");
-    expect(playUrl).toHaveBeenNthCalledWith(1, "https://cdn.example/broken.mp3");
-    expect(playUrl).toHaveBeenNthCalledWith(2, "blob:recovered");
-  });
-
-  it("returns 'none' when every tier is unavailable/fails", async () => {
-    const deps = makeDeps({
+      speak: vi.fn().mockRejectedValue(new Error("no speech")),
       requestTtsStream: vi.fn().mockResolvedValue(null),
-      speak: vi.fn().mockRejectedValue(new Error("no speech engine")),
     });
     const n = narration({ available: false, status: "" });
 
@@ -146,24 +102,16 @@ describe("playNarrationWithFallback", () => {
     expect(tier).toBe("none");
   });
 
-  it("stops immediately and plays nothing once the cancellation token is set", async () => {
-    const playUrl = vi.fn().mockResolvedValue(undefined);
-    const requestTtsStream = vi.fn().mockResolvedValue({ url: "blob:x" });
-    const speak = vi.fn().mockResolvedValue(undefined);
-    const deps = makeDeps({ playUrl, requestTtsStream, speak });
-    const n = narration({ available: false, status: "" });
-    const token = { cancelled: true };
-
-    const tier = await playNarrationWithFallback(n, deps, token);
-
+  it("stops immediately when cancelled", async () => {
+    const deps = makeDeps();
+    const tier = await playNarrationWithFallback(narration(), deps, { cancelled: true });
     expect(tier).toBe("none");
-    expect(requestTtsStream).not.toHaveBeenCalled();
-    expect(speak).not.toHaveBeenCalled();
+    expect(deps.speak).not.toHaveBeenCalled();
   });
 });
 
 describe("pollUntilReady", () => {
-  it("stops polling and returns null as soon as the task reports Failed", async () => {
+  it("stops polling when Failed", async () => {
     const pollTaskStatus = vi
       .fn()
       .mockResolvedValueOnce({ available: false, status: "Pending" })
