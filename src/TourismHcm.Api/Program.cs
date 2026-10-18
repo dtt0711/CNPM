@@ -190,7 +190,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// http-only Development profile has no HTTPS port; skip redirect to avoid startup warnings.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseCors("Default");
 
@@ -200,6 +204,12 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+if (app.Environment.IsDevelopment())
+{
+    // API has no home page; redirect `/` to Swagger UI for local browsing.
+    app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
+}
 
 app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
