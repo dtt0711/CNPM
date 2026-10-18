@@ -1,0 +1,19 @@
+using TourismHcm.Domain.Enums;
+
+namespace TourismHcm.Domain.Entities;
+
+public class AudioGenerationTask
+{
+    public Guid Id { get; set; }
+    public Guid PlaceId { get; set; }
+    public string Lang { get; set; } = string.Empty;
+    public string ContentHash { get; set; } = string.Empty;
+    public AudioTaskStatus Status { get; set; }
+    public int Attempts { get; set; }
+    public string? Error { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset? CompletedAt { get; set; }
+
+    public Place Place { get; set; } = null!;
+}

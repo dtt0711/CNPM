@@ -1,0 +1,59 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+*.nupkg
+**/packages/*
+project.lock.json
+project.fragment.lock.json
+artifacts/
+TestResults/
+coverage/
+coverage*.json
+coverage*.xml
+*.DotSettings.user
+
+## Node / Frontend
+node_modules/
+dist/
+*.local
+.vite/
+coverage-frontend/
+
+## Env / Secrets
+.env
+.env.*
+!.env.example
+**/secrets/
+**/service-account*.json
+*-credentials.json
+google-credentials.json
+
+## IDE
+.vs/
+.idea/
+*.swp
+*~
+
+## Docker / Data
+data/
+audio-storage/
+*.mp3
+!web/public/**
+
+## OS
+Thumbs.db
+.DS_Store
+
+## Logs
+logs/
+*.log

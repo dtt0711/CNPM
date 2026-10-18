@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TourismHcm.Api/TourismHcm.Api.csproj" />
+    <Project Path="src/TourismHcm.Application/TourismHcm.Application.csproj" />
+    <Project Path="src/TourismHcm.Contracts/TourismHcm.Contracts.csproj" />
+    <Project Path="src/TourismHcm.Domain/TourismHcm.Domain.csproj" />
+    <Project Path="src/TourismHcm.Infrastructure/TourismHcm.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TourismHcm.ArchitectureTests/TourismHcm.ArchitectureTests.csproj" />
+    <Project Path="tests/TourismHcm.IntegrationTests/TourismHcm.IntegrationTests.csproj" />
+    <Project Path="tests/TourismHcm.UnitTests/TourismHcm.UnitTests.csproj" />
+  </Folder>
+</Solution>
