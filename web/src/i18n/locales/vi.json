@@ -1,0 +1,72 @@
+{
+  "app": {
+    "title": "TourismHcm - Audio Guide",
+    "tagline": "Khám phá TP. Hồ Chí Minh qua lời kể âm thanh"
+  },
+  "nav": {
+    "map": "Bản đồ",
+    "places": "Điểm tham quan"
+  },
+  "language": {
+    "label": "Ngôn ngữ",
+    "vi": "Tiếng Việt",
+    "en": "Tiếng Anh",
+    "ja": "Tiếng Nhật",
+    "ko": "Tiếng Hàn",
+    "zh": "Tiếng Trung"
+  },
+  "places": {
+    "title": "Danh sách điểm tham quan",
+    "loading": "Đang tải danh sách điểm...",
+    "empty": "Không có điểm tham quan nào.",
+    "error": "Không thể tải danh sách điểm. Vui lòng thử lại.",
+    "retry": "Thử lại",
+    "distance": "{{distance}} m",
+    "category": "Loại hình",
+    "district": "Quận/Huyện",
+    "rating": "{{rating}} / 5 ({{count}} đánh giá)",
+    "viewDetail": "Xem chi tiết",
+    "playNarration": "Nghe giới thiệu"
+  },
+  "detail": {
+    "back": "Quay lại",
+    "openingHours": "Giờ mở cửa",
+    "ticketPrice": "Giá vé",
+    "address": "Địa chỉ",
+    "noDescription": "Chưa có nội dung giới thiệu cho ngôn ngữ này."
+  },
+  "audio": {
+    "play": "Phát",
+    "pause": "Tạm dừng",
+    "stop": "Dừng",
+    "status": {
+      "idle": "Sẵn sàng",
+      "ready-url": "Phát âm thanh có sẵn",
+      "poll-task": "Đã tải âm thanh vừa xử lý xong",
+      "tts-stream": "Đã tổng hợp âm thanh trực tuyến",
+      "web-speech": "Đang đọc bằng giọng tổng hợp của thiết bị",
+      "none": "Không có âm thanh cho nội dung này",
+      "loading": "Đang chuẩn bị âm thanh...",
+      "error": "Phát âm thanh gặp lỗi"
+    }
+  },
+  "offline": {
+    "download": "Tải gói offline",
+    "downloading": "Đang tải gói offline...",
+    "success": "Đã tải xong gói offline cho {{count}} điểm ({{lang}}).",
+    "error": "Không tải được gói offline. Vui lòng thử lại."
+  },
+  "geofence": {
+    "watching": "Đang theo dõi vị trí để gợi ý âm thanh gần bạn...",
+    "disabled": "Chưa kích hoạt vị trí. Nhấn để bật gợi ý tự động.",
+    "enable": "Bật gợi ý theo vị trí",
+    "disable": "Tắt gợi ý theo vị trí",
+    "unsupported": "Thiết bị không hỗ trợ định vị.",
+    "permissionDenied": "Bạn chưa cho phép truy cập vị trí.",
+    "newNarration": "Phát hiện điểm gần bạn: {{name}}"
+  },
+  "map": {
+    "loading": "Đang tải bản đồ...",
+    "locate": "Vị trí của tôi"
+  }
+}

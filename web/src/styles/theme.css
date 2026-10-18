@@ -1,0 +1,37 @@
+:root {
+  /* Teal / deep-blue travel palette with a warm accent for CTAs. */
+  --color-bg-deep: #06222b;
+  --color-bg: #0a2e39;
+  --color-surface: #0f3b48;
+  --color-surface-raised: #124657;
+  --color-border: rgba(255, 255, 255, 0.08);
+
+  --color-primary: #17a2a0;
+  --color-primary-strong: #0e8584;
+  --color-primary-soft: rgba(23, 162, 160, 0.18);
+
+  --color-accent: #f4b942;
+  --color-accent-strong: #e0a222;
+
+  --color-text: #eaf6f4;
+  --color-text-muted: #a9c7c6;
+  --color-text-dim: #7fa3a2;
+
+  --color-danger: #e5695f;
+  --color-success: #4fd1a5;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+
+  --shadow-card: 0 10px 30px -12px rgba(0, 0, 0, 0.55);
+  --shadow-pop: 0 18px 40px -16px rgba(0, 0, 0, 0.6);
+
+  --gradient-app: radial-gradient(
+      circle at 15% 0%,
+      rgba(23, 162, 160, 0.25),
+      transparent 55%
+    ),
+    radial-gradient(circle at 85% 15%, rgba(244, 185, 66, 0.08), transparent 45%),
+    linear-gradient(180deg, var(--color-bg-deep) 0%, var(--color-bg) 55%, #081f27 100%);
+}

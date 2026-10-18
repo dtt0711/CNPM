@@ -1,0 +1,72 @@
+{
+  "app": {
+    "title": "TourismHcm - オーディオガイド",
+    "tagline": "音声でホーチミン市を探索しよう"
+  },
+  "nav": {
+    "map": "地図",
+    "places": "観光地"
+  },
+  "language": {
+    "label": "言語",
+    "vi": "ベトナム語",
+    "en": "英語",
+    "ja": "日本語",
+    "ko": "韓国語",
+    "zh": "中国語"
+  },
+  "places": {
+    "title": "観光地一覧",
+    "loading": "読み込み中...",
+    "empty": "観光地が見つかりません。",
+    "error": "読み込みに失敗しました。もう一度お試しください。",
+    "retry": "再試行",
+    "distance": "{{distance}} m",
+    "category": "カテゴリー",
+    "district": "区",
+    "rating": "{{rating}} / 5 ({{count}} 件のレビュー)",
+    "viewDetail": "詳細を見る",
+    "playNarration": "音声を再生"
+  },
+  "detail": {
+    "back": "戻る",
+    "openingHours": "営業時間",
+    "ticketPrice": "入場料",
+    "address": "住所",
+    "noDescription": "この言語の説明はまだありません。"
+  },
+  "audio": {
+    "play": "再生",
+    "pause": "一時停止",
+    "stop": "停止",
+    "status": {
+      "idle": "準備完了",
+      "ready-url": "利用可能な音声を再生中",
+      "poll-task": "生成が完了した音声を再生中",
+      "tts-stream": "オンデマンドで音声を合成しました",
+      "web-speech": "デバイスの読み上げ機能で再生中",
+      "none": "この内容の音声はありません",
+      "loading": "音声を準備中...",
+      "error": "音声再生に失敗しました"
+    }
+  },
+  "offline": {
+    "download": "オフラインパックをダウンロード",
+    "downloading": "オフラインパックをダウンロード中...",
+    "success": "{{count}} 件の観光地のオフラインパックをダウンロードしました（{{lang}}）。",
+    "error": "オフラインパックのダウンロードに失敗しました。"
+  },
+  "geofence": {
+    "watching": "近くの音声ガイドを検知するため位置情報を監視しています...",
+    "disabled": "位置情報は無効です。タップして自動検知を有効にしてください。",
+    "enable": "位置ベースの通知を有効化",
+    "disable": "位置ベースの通知を無効化",
+    "unsupported": "このデバイスは位置情報に対応していません。",
+    "permissionDenied": "位置情報へのアクセスが許可されていません。",
+    "newNarration": "近くの観光地を検知しました：{{name}}"
+  },
+  "map": {
+    "loading": "地図を読み込み中...",
+    "locate": "現在地"
+  }
+}

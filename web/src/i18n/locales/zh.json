@@ -1,0 +1,72 @@
+{
+  "app": {
+    "title": "TourismHcm - 语音导览",
+    "tagline": "用声音探索胡志明市"
+  },
+  "nav": {
+    "map": "地图",
+    "places": "景点"
+  },
+  "language": {
+    "label": "语言",
+    "vi": "越南语",
+    "en": "英语",
+    "ja": "日语",
+    "ko": "韩语",
+    "zh": "中文"
+  },
+  "places": {
+    "title": "景点列表",
+    "loading": "正在加载景点...",
+    "empty": "暂无景点。",
+    "error": "加载失败，请重试。",
+    "retry": "重试",
+    "distance": "{{distance}} 米",
+    "category": "类别",
+    "district": "区/县",
+    "rating": "{{rating}} / 5（{{count}} 条评价）",
+    "viewDetail": "查看详情",
+    "playNarration": "播放语音介绍"
+  },
+  "detail": {
+    "back": "返回",
+    "openingHours": "开放时间",
+    "ticketPrice": "门票价格",
+    "address": "地址",
+    "noDescription": "暂无该语言的介绍内容。"
+  },
+  "audio": {
+    "play": "播放",
+    "pause": "暂停",
+    "stop": "停止",
+    "status": {
+      "idle": "就绪",
+      "ready-url": "正在播放现有音频",
+      "poll-task": "正在播放刚生成完成的音频",
+      "tts-stream": "已实时合成音频",
+      "web-speech": "正在使用设备语音合成朗读",
+      "none": "该内容暂无音频",
+      "loading": "正在准备音频...",
+      "error": "音频播放失败"
+    }
+  },
+  "offline": {
+    "download": "下载离线包",
+    "downloading": "正在下载离线包...",
+    "success": "已下载 {{count}} 个景点的离线包（{{lang}}）。",
+    "error": "无法下载离线包，请重试。"
+  },
+  "geofence": {
+    "watching": "正在监测您的位置以推荐附近的语音介绍...",
+    "disabled": "定位未开启，点击以启用自动提醒。",
+    "enable": "启用位置提醒",
+    "disable": "关闭位置提醒",
+    "unsupported": "此设备不支持定位功能。",
+    "permissionDenied": "尚未授予位置访问权限。",
+    "newNarration": "检测到附近景点：{{name}}"
+  },
+  "map": {
+    "loading": "正在加载地图...",
+    "locate": "我的位置"
+  }
+}

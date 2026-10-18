@@ -1,0 +1,72 @@
+{
+  "app": {
+    "title": "TourismHcm - Audio Guide",
+    "tagline": "Explore Ho Chi Minh City through audio storytelling"
+  },
+  "nav": {
+    "map": "Map",
+    "places": "Places"
+  },
+  "language": {
+    "label": "Language",
+    "vi": "Vietnamese",
+    "en": "English",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "zh": "Chinese"
+  },
+  "places": {
+    "title": "Places",
+    "loading": "Loading places...",
+    "empty": "No places found.",
+    "error": "Couldn't load places. Please try again.",
+    "retry": "Retry",
+    "distance": "{{distance}} m",
+    "category": "Category",
+    "district": "District",
+    "rating": "{{rating}} / 5 ({{count}} reviews)",
+    "viewDetail": "View detail",
+    "playNarration": "Play narration"
+  },
+  "detail": {
+    "back": "Back",
+    "openingHours": "Opening hours",
+    "ticketPrice": "Ticket price",
+    "address": "Address",
+    "noDescription": "No description available in this language yet."
+  },
+  "audio": {
+    "play": "Play",
+    "pause": "Pause",
+    "stop": "Stop",
+    "status": {
+      "idle": "Ready",
+      "ready-url": "Playing available audio",
+      "poll-task": "Loaded recently finished audio",
+      "tts-stream": "Synthesized audio on demand",
+      "web-speech": "Reading aloud with device speech synthesis",
+      "none": "No audio available for this content",
+      "loading": "Preparing audio...",
+      "error": "Audio playback failed"
+    }
+  },
+  "offline": {
+    "download": "Download offline pack",
+    "downloading": "Downloading offline pack...",
+    "success": "Downloaded offline pack for {{count}} places ({{lang}}).",
+    "error": "Could not download the offline pack. Please try again."
+  },
+  "geofence": {
+    "watching": "Watching your location for nearby audio suggestions...",
+    "disabled": "Location is off. Tap to enable automatic suggestions.",
+    "enable": "Enable location suggestions",
+    "disable": "Disable location suggestions",
+    "unsupported": "This device does not support geolocation.",
+    "permissionDenied": "Location access was not granted.",
+    "newNarration": "Nearby place detected: {{name}}"
+  },
+  "map": {
+    "loading": "Loading map...",
+    "locate": "My location"
+  }
+}

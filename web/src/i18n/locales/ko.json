@@ -1,0 +1,72 @@
+{
+  "app": {
+    "title": "TourismHcm - 오디오 가이드",
+    "tagline": "오디오로 호치민시를 탐험하세요"
+  },
+  "nav": {
+    "map": "지도",
+    "places": "관광지"
+  },
+  "language": {
+    "label": "언어",
+    "vi": "베트남어",
+    "en": "영어",
+    "ja": "일본어",
+    "ko": "한국어",
+    "zh": "중국어"
+  },
+  "places": {
+    "title": "관광지 목록",
+    "loading": "장소를 불러오는 중...",
+    "empty": "표시할 관광지가 없습니다.",
+    "error": "목록을 불러오지 못했습니다. 다시 시도해주세요.",
+    "retry": "다시 시도",
+    "distance": "{{distance}} m",
+    "category": "분류",
+    "district": "구/군",
+    "rating": "{{rating}} / 5 ({{count}}개의 리뷰)",
+    "viewDetail": "자세히 보기",
+    "playNarration": "안내 음성 재생"
+  },
+  "detail": {
+    "back": "뒤로",
+    "openingHours": "운영 시간",
+    "ticketPrice": "입장료",
+    "address": "주소",
+    "noDescription": "이 언어로 작성된 설명이 아직 없습니다."
+  },
+  "audio": {
+    "play": "재생",
+    "pause": "일시정지",
+    "stop": "정지",
+    "status": {
+      "idle": "준비됨",
+      "ready-url": "준비된 오디오 재생 중",
+      "poll-task": "방금 완료된 오디오 재생 중",
+      "tts-stream": "실시간으로 합성된 오디오 재생 중",
+      "web-speech": "기기의 음성 합성으로 읽어주는 중",
+      "none": "이 콘텐츠에 대한 오디오가 없습니다",
+      "loading": "오디오 준비 중...",
+      "error": "오디오 재생에 실패했습니다"
+    }
+  },
+  "offline": {
+    "download": "오프라인 팩 다운로드",
+    "downloading": "오프라인 팩 다운로드 중...",
+    "success": "{{count}}개 장소의 오프라인 팩을 다운로드했습니다 ({{lang}}).",
+    "error": "오프라인 팩을 다운로드하지 못했습니다. 다시 시도해주세요."
+  },
+  "geofence": {
+    "watching": "주변 오디오 안내를 위해 위치를 추적하고 있습니다...",
+    "disabled": "위치 서비스가 꺼져 있습니다. 눌러서 자동 알림을 활성화하세요.",
+    "enable": "위치 기반 알림 활성화",
+    "disable": "위치 기반 알림 비활성화",
+    "unsupported": "이 기기는 위치 서비스를 지원하지 않습니다.",
+    "permissionDenied": "위치 접근 권한이 허용되지 않았습니다.",
+    "newNarration": "근처 장소를 발견했습니다: {{name}}"
+  },
+  "map": {
+    "loading": "지도를 불러오는 중...",
+    "locate": "현재 위치"
+  }
+}
