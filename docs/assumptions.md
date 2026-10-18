@@ -18,3 +18,4 @@ Documented decisions made when the specification did not mandate a single choice
 14. **Integration tests**: use Testcontainers SQL Server; they skip when Docker engine is unavailable.
 15. **NuGet audit**: transitive advisories `NU1901–NU1904` are warnings-not-errors so EF SQL Client restore succeeds; direct package audit remains enabled.
 16. **Program.cs Infrastructure usage**: besides `AddInfrastructure`, Development bootstrap calls `MigrateAsync` + `DataSeeder` (never in Production). Controllers remain free of Infrastructure types.
+17. **No cloud API keys**: Development may run with `Translation:Provider=Fake` and `Speech:Provider=Fake`. Manual English seed translations enable multilingual demos via content fallback (`ja`→`en`, `isFallback=true`) and browser **Web Speech API** (no Azure). Real Japanese/Korean/Chinese machine translation and cloud MP3 still require Google/Azure keys when you have them.

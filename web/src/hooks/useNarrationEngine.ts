@@ -44,7 +44,9 @@ export function useNarrationEngine(lang: string): NarrationState {
         setSource(event.source);
         setTier("loading");
         setError(null);
-        playerRef.current?.play({ ...event.narration, lang: event.lang }).catch(() => {
+        // Prefer actualLang so Web Speech matches fallback text (e.g. vi/en when ja missing).
+        const speakLang = event.narration.actualLang || event.lang;
+        playerRef.current?.play({ ...event.narration, lang: speakLang }).catch(() => {
           setError("playback-error");
         });
       },

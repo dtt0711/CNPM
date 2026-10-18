@@ -28,6 +28,9 @@ public static class DataSeeder
         await SeedRolesAsync(dbContext, ct);
         await SeedAdminUserAsync(dbContext, configuration, passwordHasher, logger, ct);
         await SeedPlacesAsync(dbContext, ct);
+        // Offline-friendly: Manual English guides so multilingual demo works without Google API keys.
+        // Japanese/Korean/Chinese requests then fall back to English (isFallback=true) and Web Speech speaks en.
+        await SeedMissingEnglishTranslationsAsync(dbContext, logger, ct);
 
         await dbContext.SaveChangesAsync(ct);
     }
@@ -125,6 +128,96 @@ public static class DataSeeder
 
         await dbContext.SaveChangesAsync(ct);
     }
+
+    /// <summary>
+    /// Adds Manual English narration for places that only have Vietnamese yet.
+    /// Enables no-cloud demos: choose ja/ko/zh → content falls back to English → browser Web Speech reads it.
+    /// </summary>
+    private static async Task SeedMissingEnglishTranslationsAsync(
+        TourismHcmDbContext dbContext,
+        ILogger logger,
+        CancellationToken ct)
+    {
+        var places = await dbContext.Places.AsNoTracking().ToListAsync(ct);
+        if (places.Count == 0)
+        {
+            return;
+        }
+
+        var existingEn = await dbContext.PlaceTranslations
+            .Where(t => t.Lang == AppLanguages.English)
+            .Select(t => t.PlaceId)
+            .ToListAsync(ct);
+        var haveEn = existingEn.ToHashSet();
+
+        var now = DateTimeOffset.UtcNow;
+        var added = 0;
+
+        foreach (var place in places)
+        {
+            if (haveEn.Contains(place.Id))
+            {
+                continue;
+            }
+
+            var english = EnglishGuides.TryGetValue(place.Name, out var guide)
+                ? guide
+                : $"Welcome to {place.Name}. This English guide is sample offline content for demos without cloud translation. {place.DescriptionVi}";
+
+            dbContext.PlaceTranslations.Add(new PlaceTranslation
+            {
+                Id = Guid.NewGuid(),
+                PlaceId = place.Id,
+                Lang = AppLanguages.English,
+                Text = english,
+                Source = TranslationSource.Manual,
+                ContentHash = place.ContentHash,
+                UpdatedAt = now,
+            });
+            added++;
+        }
+
+        if (added > 0)
+        {
+            await dbContext.SaveChangesAsync(ct);
+            logger.LogInformation("Seeded {Count} Manual English place translations for offline/no-API-key demos.", added);
+        }
+    }
+
+    /// <summary>Manual English tour texts (demo quality) keyed by Vietnamese place name.</summary>
+    private static readonly Dictionary<string, string> EnglishGuides = new(StringComparer.Ordinal)
+    {
+        ["Dinh Độc Lập"] =
+            "Independence Palace, also known as Reunification Palace, is one of Saigon’s most important historic landmarks. Once the workplace of the President of the Republic of Vietnam, it witnessed the historic moment at noon on 30 April 1975 when a liberation tank crashed through the main gate, marking national reunification. The modern building blends Eastern philosophy with wide gardens, a state banquet hall, a command bunker and secret tunnels. Visitors can tour presidential offices, a cinema room, the rooftop helipad and wartime exhibits that bring a pivotal chapter of Vietnamese history to life.",
+        ["Nhà thờ Đức Bà"] =
+            "Notre-Dame Cathedral Basilica of Saigon is an architectural icon built by the French between 1877 and 1880 in a Romanesque style with Gothic touches. Materials from cement to roof tiles were shipped from France. Unusually, the church uses exposed red bricks without plaster, helping it shed water and resist humidity for more than a century. Twin bell towers over 60 metres high frame the city centre, while the statue of Our Lady of Peace in the forecourt is a favourite photo stop for visitors exploring District 1.",
+        ["Bưu điện Trung tâm Sài Gòn"] =
+            "Saigon Central Post Office stands beside Notre-Dame Cathedral and was built from 1886 to 1891 in classical French style. Its symmetrical façade, arched windows and vaulted interior still hold an antique map of Saigon and Cochinchina and a century-old wall clock. Beyond postal services it is a beloved sightseeing and souvenir stop, drawing international visitors who come for its rare colonial atmosphere amid the modern city.",
+        ["Chợ Bến Thành"] =
+            "Ben Thanh Market is one of Saigon’s oldest icons, dating from 1912, with its famous clock tower facing Quach Thi Trang roundabout. Four gates open to the four cardinal directions, and inside thousands of stalls sell fabrics, clothes, handicrafts, dry goods and southern street food. It is ideal for soaking up the bustle, tasting bánh xèo or hủ tiếu, and picking up souvenirs; the nearby night market keeps food and shopping going late into the evening.",
+        ["Bảo tàng Chứng tích Chiến tranh"] =
+            "The War Remnants Museum is among Vietnam’s most visited museums by international travellers. Thousands of artefacts, documents and photographs document the human cost of conflict, especially the American War—Agent Orange consequences, a Con Dao tiger-cage reconstruction, outdoor tanks and aircraft, and powerful press images. It offers a sobering, often emotional perspective on peace and modern Vietnamese history.",
+        ["Phố đi bộ Nguyễn Huệ"] =
+            "Nguyen Hue Walking Street is the city’s grand central boulevard, running from City Hall to the Saigon River at Bach Dang. Evenings and weekends fill with street culture, light shows, music and major outdoor events, framed by skyscrapers, hotels and cafés. It is also home to the famous Nguyen Hue flower street each Lunar New Year, when locals and tourists crowd the avenue for photos and celebration.",
+        ["Landmark 81"] =
+            "Landmark 81 is Vietnam’s tallest tower at 81 storeys, rising beside the Saigon River in Vinhomes Central Park. Inspired by bundles of bamboo reaching skyward, it houses residences, offices, Vincom mall and the Landmark 81 SkyView observatory with 360-degree glass views over the city and river. At night LED lighting makes it a defining piece of Saigon’s skyline and a symbol of the city’s rapid growth.",
+        ["Thảo Cầm Viên Sài Gòn"] =
+            "Saigon Zoo and Botanical Gardens, founded in 1864, is among the world’s oldest zoos and Vietnam’s oldest. Vast grounds with century-old trees hold hundreds of species—tigers, elephants, giraffes, primates, birds and reptiles—plus rich botanical collections. Families and students love this green escape in the city centre; the Ho Chi Minh City Museum of History on site lets you combine nature with culture in one visit.",
+        ["Chợ Lớn (Chợ Bình Tây)"] =
+            "Cholon, centred on Binh Tay Market, is the historic heart of Saigon’s Chinese community, blending Hoa–Viet culture, architecture and food. Built in the 1920s by a Chinese merchant, Binh Tay features curved roofs, a central watchtower and a wide courtyard, serving as a major wholesale hub for fabrics, household goods, spices and traditional medicine. Nearby guild halls and temples such as Thien Hau Pagoda reward a walking tour of this distinctive district.",
+        ["Địa đạo Củ Chi"] =
+            "The Cu Chi Tunnels are a world-famous underground defence network dug during the wars against France and later expanded against the United States—over 250 kilometres of passages with meeting rooms, clinics, kitchens and workshops. Visitors can crawl a short authentic section, learn about guerrilla traps, watch historical films and taste cassava with sesame salt, the staple of wartime life—an unforgettable lesson in Vietnamese resilience.",
+        ["Rừng ngập mặn Cần Giờ"] =
+            "Can Gio Mangrove Forest is a UNESCO Biosphere Reserve about 50 kilometres southeast of central Ho Chi Minh City. Restored after wartime damage, it shelters monkeys on Monkey Island, waterbirds, crocodiles and classic tidal flora such as mắm and đước trees. Boat trips through shady canals, the historic Rung Sac base and fresh local seafood make it a perfect nature day-trip away from urban noise.",
+        ["Bảo tàng Mỹ thuật TP. Hồ Chí Minh"] =
+            "The Fine Arts Museum occupies a striking French–Chinese villa once owned by a wealthy Chinese merchant family. Carved wooden stairs, ornate ironwork and clever tropical ventilation frame thousands of paintings, sculptures, ceramics and folk art from ancient to modern Vietnam. Beautiful natural light also makes it a favourite photography spot for younger visitors alongside its serious artistic value.",
+        ["Chùa Ngọc Hoàng"] =
+            "Ngoc Hoang Pagoda, or Phuoc Hai Tu, is one of Saigon’s most distinctive Chinese temples, built in the early twentieth century to honour the Jade Emperor. Traditional roofs, intricate wood and paper craft, and incense-filled halls create a solemn atmosphere. Famous for prayers for children and romance—and visited by President Barack Obama—it also has a turtle pond where locals release turtles for blessings of peace and health.",
+        ["Nhà hát Thành phố"] =
+            "The Municipal Theatre, or Saigon Opera House, was built from 1898 in flamboyant French colonial style inspired by European opera houses, with an ornate sculpted façade. Sitting between the Continental Hotel and Nguyen Hue Walking Street, it hosts water puppetry, folk dance, symphony, cải lương and tourist shows such as À Ố Show. Illuminated at night, it is one of the most photographed landmarks in District 1.",
+        ["Bitexco Financial Tower"] =
+            "Bitexco Financial Tower is an iconic Saigon skyscraper shaped like a lotus bud, Vietnam’s national flower, with a dramatic helipad jutting out above 190 metres. The 68-storey tower holds offices, the Icon68 mall and Saigon Skydeck on floor 49 for sweeping views of the river and skyline. After dark its lights help define the city’s modern financial-district horizon.",
+    };
 
     private static List<Place> BuildPlaces(DateTimeOffset now)
     {
