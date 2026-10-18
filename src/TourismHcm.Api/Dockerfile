@@ -4,6 +4,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 COPY Directory.Build.props ./
+COPY nuget.config ./
 COPY TourismHcm.slnx ./
 COPY src/TourismHcm.Domain/TourismHcm.Domain.csproj src/TourismHcm.Domain/
 COPY src/TourismHcm.Contracts/TourismHcm.Contracts.csproj src/TourismHcm.Contracts/
@@ -14,7 +15,15 @@ COPY src/TourismHcm.Api/TourismHcm.Api.csproj src/TourismHcm.Api/
 RUN dotnet restore src/TourismHcm.Api/TourismHcm.Api.csproj
 
 COPY src/ src/
-RUN dotnet publish src/TourismHcm.Api/TourismHcm.Api.csproj -c Release -o /app/publish /p:UseAppHost=false --no-restore
+
+# Re-restore after full source copy so transitive packages match the locked graph,
+# then publish (avoid stale --no-restore against a project-only restore layer).
+RUN dotnet restore src/TourismHcm.Api/TourismHcm.Api.csproj \
+    && dotnet publish src/TourismHcm.Api/TourismHcm.Api.csproj \
+        -c Release \
+        -o /app/publish \
+        /p:UseAppHost=false \
+        --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
