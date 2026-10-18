@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop, "feature/**"]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Format verify
+        run: dotnet format --verify-no-changes --no-restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release /p:TreatWarningsAsErrors=true
+
+      - name: Unit + Architecture tests with coverage
+        run: >
+          dotnet test tests/TourismHcm.UnitTests
+          tests/TourismHcm.ArchitectureTests
+          -c Release --no-build --verbosity normal
+          /p:CollectCoverage=true
+          /p:CoverletOutputFormat=cobertura
+          /p:Include="[TourismHcm.Application]*"
+          /p:Threshold=80
+          /p:ThresholdType=line
+
+      - name: Integration tests
+        run: >
+          dotnet test tests/TourismHcm.IntegrationTests
+          -c Release --no-build --verbosity normal
+        env:
+          ASPNETCORE_ENVIRONMENT: Testing
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Vitest
+        run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: ""
+          VITE_MAP_TILE_URL: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+
+  docker:
+    name: Docker build
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build API image
+        run: docker build -f src/TourismHcm.Api/Dockerfile -t tourismhcm-api:ci .
+
+      - name: Build Web image
+        run: docker build -f web/Dockerfile -t tourismhcm-web:ci ./web

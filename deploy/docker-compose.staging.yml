@@ -1,0 +1,35 @@
+# Place on the staging host at /opt/tourismhcm/staging/docker-compose.staging.yml
+# Fill env from host secrets / GitHub Actions SSH deploy.
+
+services:
+  api:
+    image: ${IMAGE_API}
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Default: ${STAGING_CONNECTION_STRING}
+      ConnectionStrings__Redis: ${REDIS_CONNECTION_STRING}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY}
+      Translation__Provider: Google
+      Translation__ApiKey: ${GOOGLE_TRANSLATION_API_KEY}
+      Speech__Provider: Azure
+      Speech__AzureKey: ${AZURE_SPEECH_KEY}
+      Speech__AzureRegion: ${AZURE_SPEECH_REGION}
+      AudioStorage__RootPath: /app/audio-storage
+      Cors__AllowedOrigins__0: ${STAGING_WEB_ORIGIN}
+    volumes:
+      - audio_data:/app/audio-storage
+    ports:
+      - "8080:8080"
+
+  web:
+    image: ${IMAGE_WEB}
+    restart: unless-stopped
+    ports:
+      - "80:8080"
+    depends_on:
+      - api
+
+volumes:
+  audio_data:

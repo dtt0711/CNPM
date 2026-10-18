@@ -1,0 +1,35 @@
+# Place on the production host at /opt/tourismhcm/production/docker-compose.production.yml
+# Production never auto-migrates; apply idempotent SQL before up.
+
+services:
+  api:
+    image: ${IMAGE_API}
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Default: ${PRODUCTION_CONNECTION_STRING}
+      ConnectionStrings__Redis: ${REDIS_CONNECTION_STRING}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY}
+      Translation__Provider: Google
+      Translation__ApiKey: ${GOOGLE_TRANSLATION_API_KEY}
+      Speech__Provider: Azure
+      Speech__AzureKey: ${AZURE_SPEECH_KEY}
+      Speech__AzureRegion: ${AZURE_SPEECH_REGION}
+      AudioStorage__RootPath: /app/audio-storage
+      Cors__AllowedOrigins__0: ${PRODUCTION_WEB_ORIGIN}
+    volumes:
+      - audio_data:/app/audio-storage
+    ports:
+      - "8080:8080"
+
+  web:
+    image: ${IMAGE_WEB}
+    restart: unless-stopped
+    ports:
+      - "80:8080"
+    depends_on:
+      - api
+
+volumes:
+  audio_data:

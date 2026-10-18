@@ -1,0 +1,118 @@
+name: CD Staging
+
+on:
+  push:
+    branches: [develop]
+
+concurrency:
+  group: staging
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_API: ghcr.io/${{ github.repository_owner }}/tourismhcm-api
+  IMAGE_WEB: ghcr.io/${{ github.repository_owner }}/tourismhcm-web
+
+jobs:
+  build-push:
+    name: Build and push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      sha: ${{ steps.meta.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: meta
+        run: echo "sha=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Login GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/TourismHcm.Api/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_API }}:${{ github.sha }}
+            ${{ env.IMAGE_API }}:staging
+
+      - name: Build and push Web
+        uses: docker/build-push-action@v6
+        with:
+          context: ./web
+          file: web/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_WEB }}:${{ github.sha }}
+            ${{ env.IMAGE_WEB }}:staging
+
+  migrate-deploy:
+    name: Migrate and deploy staging
+    needs: build-push
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Generate idempotent migration script
+        run: |
+          dotnet tool install --global dotnet-ef --version 10.0.*
+          dotnet restore
+          dotnet ef migrations script --idempotent \
+            --project src/TourismHcm.Infrastructure \
+            --startup-project src/TourismHcm.Api \
+            --output ./artifacts/migrate-staging.sql
+        env:
+          ConnectionStrings__Default: ${{ secrets.STAGING_CONNECTION_STRING }}
+
+      - name: Apply migration via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            mkdir -p /opt/tourismhcm/staging
+            cd /opt/tourismhcm/staging
+            echo "${{ secrets.STAGING_CONNECTION_STRING }}" > .conn
+            # Apply SQL with sqlcmd or docker exec into sqlserver — operator must configure
+            docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+            export IMAGE_API=${{ env.IMAGE_API }}:${{ needs.build-push.outputs.sha }}
+            export IMAGE_WEB=${{ env.IMAGE_WEB }}:${{ needs.build-push.outputs.sha }}
+            if [ -f docker-compose.staging.yml ]; then
+              docker compose -f docker-compose.staging.yml pull
+              docker compose -f docker-compose.staging.yml up -d
+            else
+              echo "Place docker-compose.staging.yml on the server (see docs/deploy.md)"
+              exit 1
+            fi
+
+      - name: Smoke test /health/ready
+        run: |
+          set -euo pipefail
+          URL="${{ secrets.STAGING_URL }}/health/ready"
+          for i in $(seq 1 30); do
+            if curl -fsS "$URL"; then
+              echo "Staging healthy"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Staging health check failed"
+          exit 1

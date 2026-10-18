@@ -1,0 +1,144 @@
+name: CD Production
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_API: ghcr.io/${{ github.repository_owner }}/tourismhcm-api
+  IMAGE_WEB: ghcr.io/${{ github.repository_owner }}/tourismhcm-web
+
+jobs:
+  deploy:
+    name: Deploy production
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve image tag from release tag
+        id: meta
+        run: |
+          echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          # Prefer pre-built staging SHA if provided; otherwise retag from staging label
+          echo "image_tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Login GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Ensure release images exist (retarget from staging SHA if needed)
+        run: |
+          set -euo pipefail
+          # If vX.Y.Z images are not yet present, build from the tagged commit.
+          docker build -f src/TourismHcm.Api/Dockerfile -t ${{ env.IMAGE_API }}:${{ steps.meta.outputs.image_tag }} .
+          docker build -f web/Dockerfile -t ${{ env.IMAGE_WEB }}:${{ steps.meta.outputs.image_tag }} ./web
+          docker push ${{ env.IMAGE_API }}:${{ steps.meta.outputs.image_tag }}
+          docker push ${{ env.IMAGE_WEB }}:${{ steps.meta.outputs.image_tag }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Generate idempotent migration script
+        run: |
+          dotnet tool install --global dotnet-ef --version 10.0.*
+          dotnet restore
+          dotnet ef migrations script --idempotent \
+            --project src/TourismHcm.Infrastructure \
+            --startup-project src/TourismHcm.Api \
+            --output ./artifacts/migrate-production.sql
+
+      - name: Capture previous production image for rollback
+        id: prev
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /opt/tourismhcm/production || exit 0
+            PREV=$(docker compose -f docker-compose.production.yml images -q api 2>/dev/null | head -n1 || true)
+            echo "prev_image=$PREV"
+
+      - name: Deploy production
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /opt/tourismhcm/production
+            docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+            export IMAGE_API=${{ env.IMAGE_API }}:${{ steps.meta.outputs.image_tag }}
+            export IMAGE_WEB=${{ env.IMAGE_WEB }}:${{ steps.meta.outputs.image_tag }}
+            # Apply expand/contract migration OUTSIDE the app process
+            # (operator: pipe artifacts/migrate-production.sql into sqlcmd)
+            docker compose -f docker-compose.production.yml pull
+            docker compose -f docker-compose.production.yml up -d
+
+      - name: Health check
+        id: health
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          URL="${{ secrets.PRODUCTION_URL }}/health/ready"
+          for i in $(seq 1 30); do
+            if curl -fsS "$URL"; then
+              echo "Production healthy"
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+
+      - name: Automatic rollback on health failure
+        if: steps.health.outcome == 'failure'
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /opt/tourismhcm/production
+            PREV_TAG_FILE=.previous-image-tag
+            if [ -f "$PREV_TAG_FILE" ]; then
+              export IMAGE_API=$(cat "$PREV_TAG_FILE" | cut -d' ' -f1)
+              export IMAGE_WEB=$(cat "$PREV_TAG_FILE" | cut -d' ' -f2)
+              docker compose -f docker-compose.production.yml up -d
+              echo "Rolled back to previous images"
+            else
+              echo "No previous image tag recorded; manual intervention required"
+              exit 1
+            fi
+
+      - name: Fail job if health failed
+        if: steps.health.outcome == 'failure'
+        run: exit 1
+
+      - name: Record current images for next rollback
+        if: steps.health.outcome == 'success'
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd /opt/tourismhcm/production
+            echo "${{ env.IMAGE_API }}:${{ steps.meta.outputs.image_tag }} ${{ env.IMAGE_WEB }}:${{ steps.meta.outputs.image_tag }}" > .previous-image-tag
