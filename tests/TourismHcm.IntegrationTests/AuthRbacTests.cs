@@ -66,9 +66,9 @@ public sealed class AuthRbacTests
         var userDelete = await userClient.DeleteAsync($"/api/v1/places/{placeId}");
         userDelete.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
-        await _factory.GrantRoleAsync(email, AppRoles.Editor);
+        await _factory.GrantRoleAsync(email, AppRoles.EditorLegacyName);
         var editorLogin = await Api.LoginAsync(userClient, email, "Password123");
-        editorLogin.Roles.Should().Contain(AppRoles.Editor);
+        editorLogin.Roles.Should().Contain(AppRoles.EditorLegacyName);
         userClient.UseBearer(editorLogin.AccessToken);
 
         var editorUpdate = await userClient.PutAsJsonAsync($"/api/v1/places/{placeId}", new TourismHcm.Contracts.Places.UpdatePlaceRequest

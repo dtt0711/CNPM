@@ -49,9 +49,9 @@
     "distanceHint": "현재 GPS 위치로부터의 거리",
     "sortedByDistance": "가까운 거리순으로 정렬",
     "ward": "방",
-    "rating": "{{rating}} ({{count}})",
-    "reviewCount": "리뷰 {{count}}개",
-    "ratingWithLabel": "{{rating}} (리뷰 {{count}}개)",
+    "rating": "{{rating}} ({{reviews}})",
+    "reviewCount": "리뷰 {{reviews}}개",
+    "ratingWithLabel": "{{rating}} (리뷰 {{reviews}}개)",
     "viewDetail": "자세히 보기",
     "playNarration": "안내 음성 재생"
   },

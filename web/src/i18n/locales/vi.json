@@ -49,9 +49,9 @@
     "distanceHint": "Khoảng cách từ vị trí GPS hiện tại",
     "sortedByDistance": "Sắp xếp theo khoảng cách gần nhất",
     "ward": "Phường",
-    "rating": "{{rating}} ({{count}})",
-    "reviewCount": "{{count}} đánh giá",
-    "ratingWithLabel": "{{rating}} ({{count}} đánh giá)",
+    "rating": "{{rating}} ({{reviews}})",
+    "reviewCount": "{{reviews}} đánh giá",
+    "ratingWithLabel": "{{rating}} ({{reviews}} đánh giá)",
     "viewDetail": "Xem chi tiết",
     "playNarration": "Nghe giới thiệu"
   },

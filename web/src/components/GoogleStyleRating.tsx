@@ -24,8 +24,8 @@ export function GoogleStyleRating({
   const countLabel = reviewCount.toLocaleString(locale);
 
   const label = showReviewsLabel
-    ? t("places.ratingWithLabel", { rating: score, count: countLabel })
-    : t("places.rating", { rating: score, count: countLabel });
+    ? t("places.ratingWithLabel", { rating: score, reviews: countLabel })
+    : t("places.rating", { rating: score, reviews: countLabel });
 
   return (
     <div
@@ -52,7 +52,7 @@ export function GoogleStyleRating({
       </span>
       <span className="gmaps-rating__count">
         {showReviewsLabel
-          ? t("places.reviewCount", { count: countLabel })
+          ? t("places.reviewCount", { reviews: countLabel })
           : `(${countLabel})`}
       </span>
     </div>

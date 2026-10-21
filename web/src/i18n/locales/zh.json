@@ -49,9 +49,9 @@
     "distanceHint": "距当前 GPS 位置的距离",
     "sortedByDistance": "按最近距离排序",
     "ward": "坊",
-    "rating": "{{rating}} ({{count}})",
-    "reviewCount": "{{count}} 条评价",
-    "ratingWithLabel": "{{rating}}（{{count}} 条评价）",
+    "rating": "{{rating}} ({{reviews}})",
+    "reviewCount": "{{reviews}} 条评价",
+    "ratingWithLabel": "{{rating}}（{{reviews}} 条评价）",
     "viewDetail": "查看详情",
     "playNarration": "播放语音介绍"
   },

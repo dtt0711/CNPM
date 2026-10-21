@@ -49,9 +49,9 @@
     "distanceHint": "現在のGPS位置からの距離",
     "sortedByDistance": "近い順に並べています",
     "ward": "坊",
-    "rating": "{{rating}} ({{count}})",
-    "reviewCount": "レビュー {{count}} 件",
-    "ratingWithLabel": "{{rating}}（レビュー {{count}} 件）",
+    "rating": "{{rating}} ({{reviews}})",
+    "reviewCount": "レビュー {{reviews}} 件",
+    "ratingWithLabel": "{{rating}}（レビュー {{reviews}} 件）",
     "viewDetail": "詳細を見る",
     "playNarration": "音声を再生"
   },

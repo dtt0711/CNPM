@@ -1,5 +1,6 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,7 +11,6 @@ using TourismHcm.Application.Abstractions.Providers;
 using TourismHcm.Application.Abstractions.Repositories;
 using TourismHcm.Application.Options;
 using TourismHcm.Domain.Constants;
-using Microsoft.AspNetCore.Authorization;
 using TourismHcm.Infrastructure.Auth;
 using TourismHcm.Infrastructure.Persistence;
 using TourismHcm.Infrastructure.Providers.Ai;

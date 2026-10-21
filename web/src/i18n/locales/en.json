@@ -49,9 +49,9 @@
     "distanceHint": "Distance from your current GPS position",
     "sortedByDistance": "Sorted by nearest distance",
     "ward": "Ward",
-    "rating": "{{rating}} ({{count}})",
-    "reviewCount": "{{count}} reviews",
-    "ratingWithLabel": "{{rating}} ({{count}} reviews)",
+    "rating": "{{rating}} ({{reviews}})",
+    "reviewCount": "{{reviews}} reviews",
+    "ratingWithLabel": "{{rating}} ({{reviews}} reviews)",
     "viewDetail": "View detail",
     "playNarration": "Play narration"
   },
