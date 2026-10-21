@@ -34,18 +34,17 @@ jobs:
           restore-keys: nuget-${{ runner.os }}-
 
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore TourismHcm.slnx
 
       - name: Format verify
-        run: dotnet format --verify-no-changes --no-restore
+        run: dotnet format TourismHcm.slnx --verify-no-changes --no-restore
 
       - name: Build
-        run: dotnet build --no-restore -c Release /p:TreatWarningsAsErrors=true
+        run: dotnet build TourismHcm.slnx --no-restore -c Release /p:TreatWarningsAsErrors=true
 
-      - name: Unit + Architecture tests with coverage
+      - name: Unit tests with coverage
         run: >
-          dotnet test tests/TourismHcm.UnitTests
-          tests/TourismHcm.ArchitectureTests
+          dotnet test tests/TourismHcm.UnitTests/TourismHcm.UnitTests.csproj
           -c Release --no-build --verbosity normal
           /p:CollectCoverage=true
           /p:CoverletOutputFormat=cobertura
@@ -53,9 +52,14 @@ jobs:
           /p:Threshold=80
           /p:ThresholdType=line
 
+      - name: Architecture tests
+        run: >
+          dotnet test tests/TourismHcm.ArchitectureTests/TourismHcm.ArchitectureTests.csproj
+          -c Release --no-build --verbosity normal
+
       - name: Integration tests
         run: >
-          dotnet test tests/TourismHcm.IntegrationTests
+          dotnet test tests/TourismHcm.IntegrationTests/TourismHcm.IntegrationTests.csproj
           -c Release --no-build --verbosity normal
         env:
           ASPNETCORE_ENVIRONMENT: Testing
