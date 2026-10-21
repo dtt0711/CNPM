@@ -39,6 +39,28 @@ public sealed class TourismHcmDbContext : DbContext
 
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
+    public DbSet<OwnerRegistration> OwnerRegistrations => Set<OwnerRegistration>();
+
+    public DbSet<PlaceSubmission> PlaceSubmissions => Set<PlaceSubmission>();
+
+    public DbSet<OwnerNotification> OwnerNotifications => Set<OwnerNotification>();
+
+    public DbSet<AiUsageLimit> AiUsageLimits => Set<AiUsageLimit>();
+
+    public DbSet<AnalyticsDevice> AnalyticsDevices => Set<AnalyticsDevice>();
+
+    public DbSet<AnalyticsSession> AnalyticsSessions => Set<AnalyticsSession>();
+
+    public DbSet<AnalyticsEvent> AnalyticsEvents => Set<AnalyticsEvent>();
+
+    public DbSet<AnalyticsHourlyMetric> AnalyticsHourlyMetrics => Set<AnalyticsHourlyMetric>();
+
+    public DbSet<AnalyticsDailyMetric> AnalyticsDailyMetrics => Set<AnalyticsDailyMetric>();
+
+    public DbSet<UiTranslationBundle> UiTranslationBundles => Set<UiTranslationBundle>();
+
+    public DbSet<RuntimeLocationHourly> RuntimeLocationHourlies => Set<RuntimeLocationHourly>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(TourismHcmDbContext).Assembly);

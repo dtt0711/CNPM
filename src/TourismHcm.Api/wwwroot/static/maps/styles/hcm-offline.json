@@ -1,0 +1,153 @@
+{
+  "version": 8,
+  "name": "HCM Offline (OpenMapTiles)",
+  "glyphs": "/static/maps/fonts/{fontstack}/{range}.pbf",
+  "sources": {
+    "hcm": {
+      "type": "vector",
+      "url": "pmtiles:///static/maps/packs/current/hcm.pmtiles",
+      "attribution": "© OpenStreetMap"
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": { "background-color": "#f2efe9" }
+    },
+    {
+      "id": "landcover",
+      "type": "fill",
+      "source": "hcm",
+      "source-layer": "landcover",
+      "paint": { "fill-color": "#d6e5c5", "fill-opacity": 0.55 }
+    },
+    {
+      "id": "landuse-park",
+      "type": "fill",
+      "source": "hcm",
+      "source-layer": "landuse",
+      "filter": ["==", "class", "park"],
+      "paint": { "fill-color": "#c6e0b4", "fill-opacity": 0.7 }
+    },
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "hcm",
+      "source-layer": "water",
+      "paint": { "fill-color": "#9ec9e2" }
+    },
+    {
+      "id": "waterway",
+      "type": "line",
+      "source": "hcm",
+      "source-layer": "waterway",
+      "paint": { "line-color": "#9ec9e2", "line-width": 1.2 }
+    },
+    {
+      "id": "building",
+      "type": "fill",
+      "source": "hcm",
+      "source-layer": "building",
+      "minzoom": 13,
+      "paint": { "fill-color": "#d9d2c5", "fill-opacity": 0.85 }
+    },
+    {
+      "id": "road-minor",
+      "type": "line",
+      "source": "hcm",
+      "source-layer": "transportation",
+      "filter": ["in", "class", "minor", "service", "path", "track"],
+      "paint": {
+        "line-color": "#ffffff",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.5, 16, 3]
+      }
+    },
+    {
+      "id": "road-secondary",
+      "type": "line",
+      "source": "hcm",
+      "source-layer": "transportation",
+      "filter": ["in", "class", "secondary", "tertiary"],
+      "paint": {
+        "line-color": "#ffffff",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 1, 16, 5]
+      }
+    },
+    {
+      "id": "road-primary",
+      "type": "line",
+      "source": "hcm",
+      "source-layer": "transportation",
+      "filter": ["in", "class", "primary", "trunk", "motorway"],
+      "paint": {
+        "line-color": "#f6d57a",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 1.2, 16, 8]
+      }
+    },
+    {
+      "id": "boundary",
+      "type": "line",
+      "source": "hcm",
+      "source-layer": "boundary",
+      "paint": { "line-color": "#9aa4a8", "line-width": 0.8, "line-dasharray": [2, 1] }
+    },
+    {
+      "id": "water-label",
+      "type": "symbol",
+      "source": "hcm",
+      "source-layer": "water_name",
+      "minzoom": 10,
+      "layout": {
+        "text-field": ["coalesce", ["get", "name:latin"], ["get", "name"]],
+        "text-font": ["Noto Sans Regular"],
+        "text-size": 11,
+        "text-max-width": 8
+      },
+      "paint": {
+        "text-color": "#2a5f7a",
+        "text-halo-color": "#d7eaf4",
+        "text-halo-width": 1.2
+      }
+    },
+    {
+      "id": "road-label",
+      "type": "symbol",
+      "source": "hcm",
+      "source-layer": "transportation_name",
+      "minzoom": 12,
+      "layout": {
+        "symbol-placement": "line",
+        "text-field": ["coalesce", ["get", "name:latin"], ["get", "name"]],
+        "text-font": ["Noto Sans Regular"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 12, 9, 16, 13],
+        "text-max-angle": 30,
+        "text-keep-upright": true
+      },
+      "paint": {
+        "text-color": "#3d3d3d",
+        "text-halo-color": "#f2efe9",
+        "text-halo-width": 1.2
+      }
+    },
+    {
+      "id": "place-label",
+      "type": "symbol",
+      "source": "hcm",
+      "source-layer": "place",
+      "minzoom": 9,
+      "layout": {
+        "text-field": ["coalesce", ["get", "name:latin"], ["get", "name"]],
+        "text-font": ["Noto Sans Regular"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 9, 11, 14, 16],
+        "text-max-width": 10,
+        "text-anchor": "center"
+      },
+      "paint": {
+        "text-color": "#1f2a30",
+        "text-halo-color": "#f2efe9",
+        "text-halo-width": 1.4
+      }
+    }
+  ]
+}

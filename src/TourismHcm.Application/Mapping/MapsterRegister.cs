@@ -17,6 +17,7 @@ public sealed class MapsterRegister : IRegister
             .Map(dest => dest.Description, src => src.DescriptionVi)
             .Map(dest => dest.Category, src => src.Category.ToString())
             .Map(dest => dest.Status, src => src.Status.ToString())
+            .Map(dest => dest.Ward, src => src.District)
             .Map(dest => dest.Tags, src => SplitTags(src.Tags));
 
         config.NewConfig<Place, PlaceDetailDto>()

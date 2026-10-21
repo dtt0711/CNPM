@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TourismHcm.Application.Abstractions.Repositories;
 using TourismHcm.Domain.Entities;
+using TourismHcm.Domain.Enums;
 using TourismHcm.Infrastructure.Persistence;
 
 namespace TourismHcm.Infrastructure.Repositories;
@@ -19,6 +20,12 @@ public sealed class AudioAssetRepository : IAudioAssetRepository
 
     public async Task<IReadOnlyList<AudioAsset>> GetByPlaceIdAsync(Guid placeId, CancellationToken ct = default) =>
         await _dbContext.AudioAssets.Where(a => a.PlaceId == placeId).ToListAsync(ct);
+
+    public async Task<IReadOnlyList<AudioAsset>> GetReadyByLangAsync(string lang, CancellationToken ct = default) =>
+        await _dbContext.AudioAssets
+            .AsNoTracking()
+            .Where(a => a.Lang == lang && a.Status == AudioAssetStatus.Ready)
+            .ToListAsync(ct);
 
     public async Task AddAsync(AudioAsset asset, CancellationToken ct = default) =>
         await _dbContext.AudioAssets.AddAsync(asset, ct);

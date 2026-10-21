@@ -1,0 +1,19 @@
+{
+  "id": "hcm-v1",
+  "scope": "hcm",
+  "label": "TP. Ho Chi Minh",
+  "version": "1.0.0",
+  "source_date": "2026-10-19",
+  "bbox": [106.55, 10.70, 106.85, 10.90],
+  "fingerprint": "thay-bang-hash-ngan",
+  "assets": [
+    {
+      "path": "hcm.pmtiles",
+      "sha256": "HASH_SHA256_O_DAY",
+      "bytes": 123456789,
+      "optional": false
+    }
+  ],
+  "style_url": "/static/maps/styles/hcm-offline.json",
+  "note": "SHA256 of hcm.pmtiles is computed at runtime. Rebuild with bounds 106.36,10.35,107.03,11.16 for full TP.HCM (docs/maps.md)."
+}

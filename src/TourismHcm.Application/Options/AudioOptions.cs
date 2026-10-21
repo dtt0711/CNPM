@@ -10,5 +10,8 @@ public sealed class AudioOptions
 
     public int MaxRetries { get; set; } = 3;
 
+    /// <summary>Max concurrent TTS generation workers (HTML AudioTaskManager Semaphore max=3).</summary>
+    public int MaxParallelTasks { get; set; } = 3;
+
     public string[] PriorityLanguages { get; set; } = AppLanguages.Priority;
 }

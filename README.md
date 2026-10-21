@@ -2,7 +2,7 @@
 
 Hệ thống audio guide theo GPS cho địa điểm du lịch Thành phố Hồ Chí Minh.
 
-**Stack:** ASP.NET Core 10 Web API · SQL Server · EF Core · Redis · React + Vite PWA · MapLibre · Google Cloud Translation · Azure AI Speech · Docker · GitHub Actions / GHCR
+**Stack:** ASP.NET Core 10 Web API · SQL Server · EF Core · Redis · React + Vite PWA · MapLibre + PMTiles · Edge-TTS / free Translate (Python sidecar) · optional Google Cloud Translation / Azure Speech / Gemini · Docker · GitHub Actions / GHCR
 
 ## Cấu trúc
 
@@ -13,9 +13,10 @@ src/
   TourismHcm.Application/     # Business services, validators, interfaces
   TourismHcm.Infrastructure/  # EF, repos, providers, JWT, seed
   TourismHcm.Api/             # Controllers, middleware, Program.cs
+services/providers/           # Edge-TTS + deep-translator sidecar
 tests/                        # Unit, Integration, Architecture
-web/                          # React PWA
-docs/                         # architecture, assumptions, deploy, presentation
+web/                          # React PWA (+ /admin portal)
+docs/                         # architecture, assumptions, deploy, maps, presentation
 ```
 
 Chi tiết hướng phụ thuộc và sơ đồ Mermaid: [docs/architecture.md](docs/architecture.md).
@@ -31,9 +32,11 @@ docker compose up --build -d
 |---------|-----|
 | API + Swagger (Dev) | http://localhost:8080/swagger |
 | Health ready | http://localhost:8080/health/ready |
+| Providers (Edge-TTS / Translate) | http://localhost:8090/health |
 | Web PWA | http://localhost:8081 |
+| Admin portal | http://localhost:8081/admin |
 
-Mặc định Development dùng **Fake** Translation/TTS (không cần key). Seed 15 địa điểm + admin từ `.env`.
+Docker Compose mặc định: **Edge** TTS + **Free** Translate qua sidecar `providers` (không còn Fake). Cần `docker compose up --build` để có service `providers` trên `:8090`. Seed 15 địa điểm + admin từ `.env`.
 
 ### Chạy API không Docker
 
@@ -43,14 +46,18 @@ dotnet ef database update --project src/TourismHcm.Infrastructure --startup-proj
 dotnet run --project src/TourismHcm.Api
 ```
 
-### Frontend
+### Frontend (cùng stack với `dotnet run`)
 
 ```bash
 cd web
 cp .env.example .env
 npm ci
-npm run dev    # http://localhost:5173 — proxy /api → :8080
+npm run dev    # http://localhost:5173 — proxy /api /static → :5020
 ```
+
+**Một stack thôi khi demo:** Vite mặc định `VITE_API_PROXY_TARGET=http://localhost:5020`. Docker Compose là stack khác (`:8080` + web `:8081`). Đừng chạy `dotnet run` và API Docker cùng lúc rồi để Vite trỏ nhầm.
+
+Nền bản đồ Offline cần `hcm.pmtiles` (gitignore, không commit). Xem [docs/maps.md](docs/maps.md). Compose bind-mount `src/TourismHcm.Api/wwwroot/static/maps` để container thấy cùng pack/fonts.
 
 ## Tests
 
@@ -82,9 +89,11 @@ Xem [.env.example](.env.example).
 | `ConnectionStrings:Redis` | Redis (cooldown geofence) |
 | `Jwt:SigningKey` | HMAC ≥ 32 ký tự |
 | `Admin:Email` / `Admin:Password` | Seed admin (Development) |
-| `Translation:Provider` / `Translation:ApiKey` | `Google` hoặc `Fake` |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Đường dẫn JSON service account (tuỳ chọn) |
-| `Speech:Provider` / `Speech:AzureKey` / `Speech:AzureRegion` | `Azure` hoặc `Fake` |
+| `Providers:BaseUrl` | Sidecar Edge-TTS / Free Translate |
+| `Translation:Provider` / `Translation:ApiKey` | `Free` (sidecar) \| `Google` |
+| `Speech:Provider` / Azure keys | `Edge` (sidecar) \| `Azure` |
+| `Ai:GeminiApiKey` | Gemini enhance-description (owner quota 10/day) |
+| `MapPack:DataDir` | PMTiles / styles root ([docs/maps.md](docs/maps.md)) |
 | `AudioStorage:RootPath` | Thư mục MP3 |
 | `VITE_API_BASE_URL` / `VITE_MAP_TILE_URL` | Frontend |
 
@@ -112,10 +121,11 @@ Xem [.env.example](.env.example).
 - `GET /places/{id}/narration?lang=`
 - `GET /audio/languages`, `POST /audio/tts`, `GET /audio/tasks/{id}/events` (SSE)
 - `GET /offline/pack?lang=`
-- Auth JWT: register / login / refresh · RBAC admin / editor / user
-- Reviews, Favorites, Tours · Admin duyệt / bản dịch Manual / regenerate audio / audit
+- Auth JWT (cookie + Bearer): register / login / refresh · RBAC `super_admin` / `admin` / `user`
+- Reviews, Favorites, Tours · Admin portal · Gemini AI · Analytics consent · UI bundles · PMTiles maps
+- `POST /localizations/on-demand|warmup|prepare-hotset`
 
-Khách ẩn danh được đọc places, trigger, narration, audio, offline.
+Khách ẩn danh được đọc places, trigger, narration, audio, offline, maps.
 
 ## CI/CD
 

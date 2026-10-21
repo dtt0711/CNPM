@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Mapster;
 using TourismHcm.Application.Abstractions.Repositories;
 using TourismHcm.Application.Abstractions.Services;
@@ -17,6 +18,7 @@ public sealed class AdminService : IAdminService
     private readonly IPlaceRepository _placeRepository;
     private readonly ITranslationRepository _translationRepository;
     private readonly IAuditLogRepository _auditLogRepository;
+    private readonly IPlatformRepository _platformRepository;
     private readonly IAudioService _audioService;
     private readonly IPlaceService _placeService;
     private readonly IUnitOfWork _unitOfWork;
@@ -25,6 +27,7 @@ public sealed class AdminService : IAdminService
         IPlaceRepository placeRepository,
         ITranslationRepository translationRepository,
         IAuditLogRepository auditLogRepository,
+        IPlatformRepository platformRepository,
         IAudioService audioService,
         IPlaceService placeService,
         IUnitOfWork unitOfWork)
@@ -32,6 +35,7 @@ public sealed class AdminService : IAdminService
         _placeRepository = placeRepository;
         _translationRepository = translationRepository;
         _auditLogRepository = auditLogRepository;
+        _platformRepository = platformRepository;
         _audioService = audioService;
         _placeService = placeService;
         _unitOfWork = unitOfWork;
@@ -138,6 +142,69 @@ public sealed class AdminService : IAdminService
         var dtos = items.Adapt<List<AuditLogDto>>();
 
         return PagedResult<AuditLogDto>.Create(dtos, safePage, safePageSize, totalCount);
+    }
+
+    public async Task<PagedResult<AdminUserDto>> ListUsersAsync(int page, int pageSize, CancellationToken ct = default)
+    {
+        var safePage = page <= 0 ? 1 : page;
+        var safePageSize = pageSize is <= 0 or > 200 ? 50 : pageSize;
+        var (items, total) = await _platformRepository.ListUsersAsync(safePage, safePageSize, ct);
+        var dtos = items.Select(u => new AdminUserDto
+        {
+            Id = u.Id,
+            Email = u.Email,
+            DisplayName = u.DisplayName,
+            IsActive = u.IsActive,
+            Roles = u.UserRoles.Select(ur => ur.Role.Name).ToList(),
+            CreatedAt = u.CreatedAt
+        }).ToList();
+
+        return PagedResult<AdminUserDto>.Create(dtos, safePage, safePageSize, total);
+    }
+
+    public async Task SetUserActiveAsync(Guid adminUserId, Guid userId, bool isActive, CancellationToken ct = default)
+    {
+        _ = await _platformRepository.GetUserWithRolesAsync(userId, ct)
+            ?? throw new NotFoundException("User", userId);
+
+        await _platformRepository.SetUserActiveAsync(userId, isActive, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
+        await WriteAuditLogAsync(adminUserId, "SetUserActive", "User", userId.ToString(), isActive.ToString(), ct);
+    }
+
+    public async Task AssignUserRolesAsync(
+        Guid adminUserId, Guid userId, AssignUserRolesRequest request, CancellationToken ct = default)
+    {
+        _ = await _platformRepository.GetUserWithRolesAsync(userId, ct)
+            ?? throw new NotFoundException("User", userId);
+
+        await _platformRepository.AssignUserRolesAsync(userId, request.Roles.ToList(), ct);
+        await _unitOfWork.SaveChangesAsync(ct);
+        await WriteAuditLogAsync(adminUserId, "AssignUserRoles", "User", userId.ToString(), string.Join(',', request.Roles), ct);
+    }
+
+    public async Task<IReadOnlyList<AdminRoleDto>> ListRolesAsync(CancellationToken ct = default)
+    {
+        var roles = await _platformRepository.GetAllRolesAsync(ct);
+        return roles.Select(r => new AdminRoleDto
+        {
+            Id = r.Id,
+            Name = r.Name,
+            Priority = r.Priority,
+            Permissions = PermissionService.ParsePermissionsJson(r.PermissionsJson, r.Name).ToList()
+        }).ToList();
+    }
+
+    public async Task UpdateRolePermissionsAsync(
+        Guid adminUserId, Guid roleId, UpdateRolePermissionsRequest request, CancellationToken ct = default)
+    {
+        _ = await _platformRepository.GetRoleByIdAsync(roleId, ct)
+            ?? throw new NotFoundException("Role", roleId);
+
+        var json = JsonSerializer.Serialize(request.Permissions.Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
+        await _platformRepository.UpdateRolePermissionsAsync(roleId, json, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
+        await WriteAuditLogAsync(adminUserId, "UpdateRolePermissions", "Role", roleId.ToString(), json, ct);
     }
 
     private async Task WriteAuditLogAsync(

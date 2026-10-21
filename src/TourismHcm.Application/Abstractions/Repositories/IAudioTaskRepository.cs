@@ -14,4 +14,10 @@ public interface IAudioTaskRepository
     /// Returns tasks left in Pending or Running state, used to recover/re-enqueue work after a restart.
     /// </summary>
     Task<IReadOnlyList<AudioGenerationTask>> GetPendingOrRunningAsync(CancellationToken ct = default);
+
+    /// <summary>Active admin queue: Pending, Running, or Paused (includes Place for display).</summary>
+    Task<IReadOnlyList<AudioGenerationTask>> GetActiveAsync(CancellationToken ct = default);
+
+    /// <summary>Recent tasks for admin stream snapshot (active + recently finished).</summary>
+    Task<IReadOnlyList<AudioGenerationTask>> GetRecentAsync(int take, CancellationToken ct = default);
 }

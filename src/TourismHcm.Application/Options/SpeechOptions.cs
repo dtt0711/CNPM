@@ -5,9 +5,9 @@ public sealed class SpeechOptions
     public const string SectionName = "Speech";
 
     /// <summary>
-    /// "Azure" or "Fake".
+    /// "Edge" (sidecar) or "Azure". The value "Fake" is ignored outside Testing.
     /// </summary>
-    public string Provider { get; set; } = "Fake";
+    public string Provider { get; set; } = "Edge";
 
     public string AzureKey { get; set; } = string.Empty;
 

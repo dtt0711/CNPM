@@ -47,7 +47,10 @@ public sealed class PlacesController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>Gets places near a given coordinate. Anonymous access allowed.</summary>
+    /// <summary>
+    /// Gets places near a given coordinate. Pass <c>radiusMeters=0</c> for nearest without a distance cap.
+    /// Anonymous access allowed.
+    /// </summary>
     [HttpGet("nearby")]
     [AllowAnonymous]
     public async Task<ActionResult<IReadOnlyList<NearbyPlaceDto>>> Nearby(

@@ -37,37 +37,24 @@ describe("toSpeechLocale", () => {
 });
 
 describe("playNarrationWithFallback", () => {
-  it("uses Web Speech when text exists (preferred in Vite DEV)", async () => {
+  it("plays ready server URL first", async () => {
     const deps = makeDeps();
-    const n = narration({ available: false, status: "" });
-
-    const tier = await playNarrationWithFallback(n, deps);
-
-    expect(tier).toBe("web-speech");
-    expect(deps.speak).toHaveBeenCalledWith(n.text, "vi-VN");
-    expect(deps.requestTtsStream).not.toHaveBeenCalled();
-  });
-
-  it("plays ready URL when Web Speech fails", async () => {
-    const deps = makeDeps({ speak: vi.fn().mockRejectedValue(new Error("no voices")) });
     const n = narration({ available: true, url: "https://cdn.example/ready.mp3", status: "Done" });
 
     const tier = await playNarrationWithFallback(n, deps);
 
     expect(tier).toBe("ready-url");
     expect(deps.playUrl).toHaveBeenCalledWith("https://cdn.example/ready.mp3");
+    expect(deps.requestTtsStream).not.toHaveBeenCalled();
   });
 
-  it("polls then plays when Web Speech fails and a pending task becomes ready", async () => {
+  it("polls then plays when a pending task becomes ready", async () => {
     const pollTaskStatus = vi
       .fn()
       .mockResolvedValueOnce({ available: false, status: "Pending" })
       .mockResolvedValueOnce({ available: true, url: "https://cdn.example/generated.mp3", status: "Done" });
 
-    const deps = makeDeps({
-      speak: vi.fn().mockRejectedValue(new Error("no voices")),
-      pollTaskStatus,
-    });
+    const deps = makeDeps({ pollTaskStatus });
     const n = narration({ available: false, status: "Pending" });
 
     const tier = await playNarrationWithFallback(n, deps);
@@ -76,18 +63,27 @@ describe("playNarrationWithFallback", () => {
     expect(deps.playUrl).toHaveBeenCalledWith("https://cdn.example/generated.mp3");
   });
 
-  it("falls back to TTS stream when Web Speech fails and nothing is pending", async () => {
+  it("requests TTS when nothing is ready yet", async () => {
     const requestTtsStream = vi.fn().mockResolvedValue({ url: "blob:tts-stream" });
-    const deps = makeDeps({
-      speak: vi.fn().mockRejectedValue(new Error("no voices")),
-      requestTtsStream,
-    });
+    const deps = makeDeps({ requestTtsStream });
     const n = narration({ available: false, status: "" });
 
     const tier = await playNarrationWithFallback(n, deps);
 
     expect(tier).toBe("tts-stream");
     expect(requestTtsStream).toHaveBeenCalled();
+  });
+
+  it("falls back to Web Speech when server audio fails", async () => {
+    const deps = makeDeps({
+      requestTtsStream: vi.fn().mockResolvedValue(null),
+    });
+    const n = narration({ available: false, status: "" });
+
+    const tier = await playNarrationWithFallback(n, deps);
+
+    expect(tier).toBe("web-speech");
+    expect(deps.speak).toHaveBeenCalledWith(n.text, "vi-VN");
   });
 
   it("returns none when every tier fails", async () => {

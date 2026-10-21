@@ -21,7 +21,7 @@ public sealed class CreatePlaceRequestValidator : AbstractValidator<CreatePlaceR
             .Must(c => Enum.TryParse<PlaceCategory>(c, true, out _))
             .WithMessage("Category must be one of: " + string.Join(", ", Enum.GetNames<PlaceCategory>()));
 
-        RuleFor(x => x.District)
+        RuleFor(x => x.Ward)
             .NotEmpty()
             .MaximumLength(100);
 

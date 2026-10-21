@@ -8,6 +8,8 @@ public interface IAudioAssetRepository
 
     Task<IReadOnlyList<AudioAsset>> GetByPlaceIdAsync(Guid placeId, CancellationToken ct = default);
 
+    Task<IReadOnlyList<AudioAsset>> GetReadyByLangAsync(string lang, CancellationToken ct = default);
+
     Task AddAsync(AudioAsset asset, CancellationToken ct = default);
 
     void Remove(AudioAsset asset);

@@ -30,7 +30,7 @@ public sealed class PlacesCrudTests
         var getResponse = await client.GetAsync($"/api/v1/places/{created.Id}");
         var fetched = await Api.ReadAsync<PlaceDetailDto>(getResponse, HttpStatusCode.OK);
         fetched.Name.Should().Be(createdName);
-        fetched.District.Should().Be(create.District);
+        fetched.Ward.Should().Be(create.Ward);
 
         var updatedName = createdName + " updated";
         var updateResponse = await client.PutAsJsonAsync($"/api/v1/places/{created.Id}", new UpdatePlaceRequest

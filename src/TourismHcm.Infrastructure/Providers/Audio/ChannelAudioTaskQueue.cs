@@ -17,6 +17,7 @@ public sealed class ChannelAudioTaskQueue : IAudioTaskQueue
         _channel = Channel.CreateBounded<Guid>(new BoundedChannelOptions(capacity: 1000)
         {
             FullMode = BoundedChannelFullMode.Wait,
+            // Single reader fans out work via SemaphoreSlim(MaxParallelTasks) in the background service.
             SingleReader = true,
             SingleWriter = false,
         });

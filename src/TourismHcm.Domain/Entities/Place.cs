@@ -21,6 +21,7 @@ public class Place
     public double AverageRating { get; set; }
     public int ReviewCount { get; set; }
     public PlaceStatus Status { get; set; } = PlaceStatus.Published;
+    public Guid? OwnerUserId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 

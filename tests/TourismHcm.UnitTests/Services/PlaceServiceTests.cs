@@ -117,6 +117,23 @@ public sealed class PlaceServiceTests
     }
 
     [Fact]
+    public async Task GetNearbyAsync_WhenRadiusZero_ReturnsNearestAmongAllPublished()
+    {
+        var far = EntityFactory.CreatePlace(name: "Far", latitude: 11.0, longitude: 106.0);
+        var near = EntityFactory.CreatePlace(name: "Near", latitude: 10.01, longitude: 106.0);
+
+        _placeRepository.GetAllPublishedAsync(Arg.Any<CancellationToken>()).Returns([far, near]);
+
+        var sut = CreateSut();
+        var result = await sut.GetNearbyAsync(10.0, 106.0, radiusMeters: 0, limit: 1);
+
+        result.Should().ContainSingle(p => p.Name == "Near");
+        await _placeRepository.DidNotReceive().GetInBoundingBoxAsync(
+            Arg.Any<double>(), Arg.Any<double>(), Arg.Any<double>(), Arg.Any<double>(),
+            Arg.Any<PlaceStatus?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task SearchAsync_UsesDefaultsForInvalidPageAndPageSize()
     {
         _placeRepository
@@ -136,7 +153,7 @@ public sealed class PlaceServiceTests
     {
         _placeRepository
             .SearchAsync(
-                "temple", PlaceCategory.Religious, "Q1", PlaceStatus.Published, "name", true, 1, 20,
+                "temple", PlaceCategory.Religious, "Bến Thành", PlaceStatus.Published, "name", true, 1, 20,
                 Arg.Any<CancellationToken>())
             .Returns(((IReadOnlyList<Place>)[], 0));
 
@@ -145,14 +162,14 @@ public sealed class PlaceServiceTests
         {
             Search = "temple",
             Category = "Religious",
-            District = "Q1",
+            Ward = "Bến Thành",
             Status = "Published",
             SortBy = "name",
             Descending = true,
         });
 
         await _placeRepository.Received(1).SearchAsync(
-            "temple", PlaceCategory.Religious, "Q1", PlaceStatus.Published, "name", true, 1, 20,
+            "temple", PlaceCategory.Religious, "Bến Thành", PlaceStatus.Published, "name", true, 1, 20,
             Arg.Any<CancellationToken>());
     }
 
@@ -180,7 +197,7 @@ public sealed class PlaceServiceTests
             Name = "Test",
             DescriptionVi = "Desc",
             Category = "NotACategory",
-            District = "Q1",
+            Ward = "Bến Thành",
             Address = "123 St",
         };
 
@@ -198,7 +215,7 @@ public sealed class PlaceServiceTests
             Name = "  New Place  ",
             DescriptionVi = "  Some description  ",
             Category = "Museum",
-            District = "Q1",
+            Ward = "Bến Thành",
             Address = "123 St",
             Latitude = 10,
             Longitude = 106,
@@ -224,7 +241,7 @@ public sealed class PlaceServiceTests
             Name = "New Place",
             DescriptionVi = "Desc",
             Category = "Park",
-            District = "Q1",
+            Ward = "Bến Thành",
             Address = "123 St",
             TriggerRadiusMeters = 75,
         };

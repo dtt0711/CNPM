@@ -10,7 +10,10 @@ using TourismHcm.Application.Abstractions.Providers;
 using TourismHcm.Application.Abstractions.Repositories;
 using TourismHcm.Application.Options;
 using TourismHcm.Domain.Constants;
+using Microsoft.AspNetCore.Authorization;
+using TourismHcm.Infrastructure.Auth;
 using TourismHcm.Infrastructure.Persistence;
+using TourismHcm.Infrastructure.Providers.Ai;
 using TourismHcm.Infrastructure.Providers.Audio;
 using TourismHcm.Infrastructure.Providers.Security;
 using TourismHcm.Infrastructure.Providers.TextToSpeech;
@@ -30,7 +33,7 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
-        AddOptions(services, configuration);
+        AddOptions(services, configuration, environment);
         AddPersistence(services, configuration);
         AddCaching(services, configuration, environment);
         AddRepositories(services);
@@ -43,7 +46,7 @@ public static class DependencyInjection
         return services;
     }
 
-    private static void AddOptions(IServiceCollection services, IConfiguration configuration)
+    private static void AddOptions(IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<AudioOptions>(configuration.GetSection(AudioOptions.SectionName));
@@ -51,6 +54,24 @@ public static class DependencyInjection
         services.Configure<GeofenceOptions>(configuration.GetSection(GeofenceOptions.SectionName));
         services.Configure<SpeechOptions>(configuration.GetSection(SpeechOptions.SectionName));
         services.Configure<TranslationOptions>(configuration.GetSection(TranslationOptions.SectionName));
+        services.Configure<ProvidersOptions>(configuration.GetSection(ProvidersOptions.SectionName));
+        services.Configure<AiOptions>(configuration.GetSection(AiOptions.SectionName));
+        services.AddOptions<MapPackOptions>()
+            .Bind(configuration.GetSection(MapPackOptions.SectionName))
+            .PostConfigure(opts =>
+            {
+                if (string.IsNullOrWhiteSpace(opts.DataDir))
+                {
+                    opts.DataDir = Path.Combine(environment.ContentRootPath, "wwwroot", "static", "maps");
+                    return;
+                }
+
+                if (!Path.IsPathRooted(opts.DataDir))
+                {
+                    opts.DataDir = Path.GetFullPath(Path.Combine(environment.ContentRootPath, opts.DataDir));
+                }
+            });
+        services.Configure<PiiOptions>(configuration.GetSection(PiiOptions.SectionName));
     }
 
     private static void AddPersistence(IServiceCollection services, IConfiguration configuration)
@@ -123,66 +144,76 @@ public static class DependencyInjection
         services.AddScoped<ITourRepository, TourRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+        services.AddScoped<IPlatformRepository, PlatformRepository>();
     }
 
     /// <summary>
     /// Registers translation/TTS providers and local disk audio storage.
     ///
-    /// Rule: when a provider's API key/credentials are present, the real provider is always
-    /// registered-regardless of environment-so staging/local setups with real keys exercise
-    /// the real integration. When credentials are absent:
-    ///   - Development/Testing: register the Fake provider stub (no external dependency).
-    ///   - Any other environment (e.g. Production): still register the real provider class.
-    ///     Its <c>IsConfigured</c> will be false and any usage throws
-    ///     <see cref="TourismHcm.Domain.Exceptions.ProviderUnavailableException"/>, which the API
-    ///     maps to HTTP 503-never silently falling back to fake audio/translations in Production.
+    /// Real providers are registered in Development and Production (sidecar Free/Edge by default).
+    /// Fake stubs exist only for the Testing host so unit/integration tests never need the sidecar.
     /// </summary>
     private static void AddProviders(IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
-        var isDevOrTest = environment.IsDevelopment() || environment.IsEnvironment("Testing");
+        var providersBaseUrl = (configuration[$"{ProvidersOptions.SectionName}:BaseUrl"] ?? "http://localhost:8090")
+            .TrimEnd('/');
+        var timeoutSeconds = int.TryParse(configuration[$"{ProvidersOptions.SectionName}:TimeoutSeconds"], out var t)
+            ? t
+            : 60;
 
-        var translationApiKey = configuration[$"{TranslationOptions.SectionName}:ApiKey"];
-        if (!string.IsNullOrWhiteSpace(translationApiKey))
+        void ConfigureSidecar(HttpClient client)
         {
-            services.AddSingleton<ITranslationProvider, GoogleTranslationProvider>();
+            client.BaseAddress = new Uri(providersBaseUrl + "/");
+            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
         }
-        else if (isDevOrTest)
+
+        // Real providers only. Fake stubs are allowed exclusively in the Testing environment
+        // (unit/integration test hosts) so CI never depends on network sidecars.
+        if (environment.IsEnvironment("Testing"))
         {
             services.AddSingleton<ITranslationProvider, FakeTranslationProvider>();
-        }
-        else
-        {
-            services.AddSingleton<ITranslationProvider, GoogleTranslationProvider>();
-        }
-
-        var speechKey = configuration[$"{SpeechOptions.SectionName}:AzureKey"];
-        var speechRegion = configuration[$"{SpeechOptions.SectionName}:AzureRegion"];
-        var speechConfigured = !string.IsNullOrWhiteSpace(speechKey) && !string.IsNullOrWhiteSpace(speechRegion);
-
-        if (speechConfigured)
-        {
-            services.AddSingleton<ITextToSpeechProvider, AzureSpeechTtsProvider>();
-        }
-        else if (isDevOrTest)
-        {
             services.AddSingleton<ITextToSpeechProvider, FakeTextToSpeechProvider>();
         }
         else
         {
-            services.AddSingleton<ITextToSpeechProvider, AzureSpeechTtsProvider>();
+            var translationProvider = (configuration[$"{TranslationOptions.SectionName}:Provider"] ?? "Free").Trim();
+            if (string.Equals(translationProvider, "Google", StringComparison.OrdinalIgnoreCase))
+            {
+                services.AddSingleton<ITranslationProvider, GoogleTranslationProvider>();
+            }
+            else
+            {
+                // Free (sidecar) is the default; "Fake" config is ignored and mapped to Free.
+                services.AddHttpClient<ITranslationProvider, FreeGoogleTranslationProvider>(ConfigureSidecar);
+            }
+
+            var speechProvider = (configuration[$"{SpeechOptions.SectionName}:Provider"] ?? "Edge").Trim();
+            if (string.Equals(speechProvider, "Azure", StringComparison.OrdinalIgnoreCase))
+            {
+                services.AddSingleton<ITextToSpeechProvider, AzureSpeechTtsProvider>();
+            }
+            else
+            {
+                // Edge (sidecar) is the default; "Fake" config is ignored and mapped to Edge.
+                services.AddHttpClient<ITextToSpeechProvider, EdgeTtsProvider>(ConfigureSidecar);
+            }
         }
 
         services.AddSingleton<IAudioStorage, LocalDiskAudioStorage>();
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
         services.AddSingleton<IJwtTokenService, JwtTokenService>();
         services.AddScoped<ICurrentUser, CurrentUser>();
+        services.AddSingleton<IPiiProtector, AesGcmPiiProtector>();
+        services.AddHttpClient<IAiAdvisorProvider, GeminiAiAdvisorProvider>();
     }
 
     private static void AddAudioPipeline(IServiceCollection services)
     {
         services.AddSingleton<ChannelAudioTaskQueue>();
         services.AddSingleton<IAudioTaskQueue>(sp => sp.GetRequiredService<ChannelAudioTaskQueue>());
+        services.AddSingleton<IAudioTaskRuntime, AudioTaskRuntime>();
         services.AddHostedService<AudioGenerationBackgroundService>();
+        services.AddHostedService<PiiRedactionBackgroundService>();
     }
 
     private static void AddAuth(IServiceCollection services, IConfiguration configuration)
@@ -206,10 +237,35 @@ public static class DependencyInjection
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.FromSeconds(30),
                 };
+
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = ctx =>
+                    {
+                        if (string.IsNullOrEmpty(ctx.Token)
+                            && ctx.Request.Cookies.TryGetValue("access_token", out var token))
+                        {
+                            ctx.Token = token;
+                        }
+
+                        return Task.CompletedTask;
+                    }
+                };
             });
 
-        services.AddAuthorizationBuilder()
-            .AddPolicy("RequireAdmin", policy => policy.RequireRole(AppRoles.Admin))
-            .AddPolicy("RequireEditor", policy => policy.RequireRole(AppRoles.Admin, AppRoles.Editor));
+        services.AddSingleton<IAuthorizationHandler, PermissionHandler>();
+
+        var authBuilder = services.AddAuthorizationBuilder()
+            .AddPolicy("RequireAdmin", policy => policy.RequireRole(AppRoles.Admin, AppRoles.SuperAdmin))
+            .AddPolicy("RequireEditor", policy => policy.RequireRole(
+                AppRoles.Admin, AppRoles.SuperAdmin, AppRoles.EditorLegacyName));
+
+        // Dynamic RBAC: one policy per static permission (JWT claim checked by PermissionHandler).
+        foreach (var permission in AppPermissions.All)
+        {
+            var policyName = $"Permission:{permission}";
+            authBuilder.AddPolicy(policyName, policy =>
+                policy.Requirements.Add(new PermissionRequirement(permission)));
+        }
     }
 }

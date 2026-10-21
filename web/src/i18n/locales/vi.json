@@ -1,19 +1,44 @@
 {
   "app": {
-    "title": "TourismHcm - Audio Guide",
+    "title": "Du lịch TP.HCM - Ứng dụng hướng dẫn âm thanh",
     "tagline": "Khám phá TP. Hồ Chí Minh qua lời kể âm thanh"
   },
   "nav": {
     "map": "Bản đồ",
-    "places": "Điểm tham quan"
+    "places": "Điểm tham quan",
+    "saved": "Đã lưu"
+  },
+  "account": {
+    "signIn": "Đăng nhập",
+    "signOut": "Đăng xuất",
+    "admin": "Trang quản trị"
+  },
+  "saved": {
+    "title": "Đã lưu",
+    "login": "Đăng nhập để lưu điểm yêu thích và tạo lộ trình.",
+    "favorites": "Yêu thích",
+    "tours": "Lộ trình",
+    "emptyFavorites": "Chưa có địa điểm yêu thích. Mở một điểm rồi nhấn Lưu.",
+    "emptyTours": "Chưa có lộ trình. Tạo từ điểm yêu thích để nhớ thứ tự ghé thăm.",
+    "composerHint": "Chọn ít nhất 2 điểm. Thứ tự chọn sẽ được tối ưu theo khoảng cách.",
+    "pickedCount": "{{count}} điểm đã chọn",
+    "needMoreFavorites": "Lưu ít nhất 2 điểm yêu thích rồi tạo lộ trình.",
+    "stopCount": "{{count}} điểm",
+    "cancelCreate": "Hủy",
+    "tourName": "Tên lộ trình, ví dụ: Sáng Bến Thành",
+    "untitledTour": "Lộ trình của tôi",
+    "createTour": "Tạo lộ trình",
+    "deleteTour": "Xóa",
+    "needPlaces": "Chọn ít nhất 2 địa điểm yêu thích.",
+    "error": "Không tải hoặc lưu được. Thử lại sau khi đăng nhập."
   },
   "language": {
-    "label": "Ngôn ngữ",
+    "label": "Language",
     "vi": "Tiếng Việt",
-    "en": "Tiếng Anh",
-    "ja": "Tiếng Nhật",
-    "ko": "Tiếng Hàn",
-    "zh": "Tiếng Trung"
+    "en": "English",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "zh": "Chinese"
   },
   "places": {
     "title": "Danh sách điểm tham quan",
@@ -21,10 +46,12 @@
     "empty": "Không có điểm tham quan nào.",
     "error": "Không thể tải danh sách điểm. Vui lòng thử lại.",
     "retry": "Thử lại",
-    "distance": "{{distance}} m",
-    "category": "Loại hình",
-    "district": "Quận/Huyện",
-    "rating": "{{rating}} / 5 ({{count}} đánh giá)",
+    "distanceHint": "Khoảng cách từ vị trí GPS hiện tại",
+    "sortedByDistance": "Sắp xếp theo khoảng cách gần nhất",
+    "ward": "Phường",
+    "rating": "{{rating}} ({{count}})",
+    "reviewCount": "{{count}} đánh giá",
+    "ratingWithLabel": "{{rating}} ({{count}} đánh giá)",
     "viewDetail": "Xem chi tiết",
     "playNarration": "Nghe giới thiệu"
   },
@@ -33,42 +60,62 @@
     "openingHours": "Giờ mở cửa",
     "ticketPrice": "Giá vé",
     "address": "Địa chỉ",
-    "noDescription": "Chưa có nội dung giới thiệu cho ngôn ngữ này."
+    "noDescription": "Chưa có nội dung giới thiệu cho ngôn ngữ này.",
+    "playHint": "Nhấn nút “Nghe giới thiệu” ở thanh dưới để phát thuyết minh.",
+    "translating": "Đang dịch nội dung sang ngôn ngữ đã chọn…",
+    "fallbackLang": "Đang dùng bản dự phòng (chưa có bản dịch đích). Thử nghe lại sau vài giây.",
+    "favorite": "Lưu",
+    "unfavorite": "Đã lưu"
   },
   "audio": {
     "play": "Phát",
-    "pause": "Tạm dừng",
     "stop": "Dừng",
     "status": {
       "idle": "Sẵn sàng",
       "ready-url": "Phát âm thanh có sẵn",
-      "poll-task": "Đã tải âm thanh vừa xử lý xong",
-      "tts-stream": "Đã tổng hợp âm thanh trực tuyến",
+      "poll-task": "Đang tạo / chờ file âm thanh trên máy chủ…",
+      "tts-stream": "Đang phát âm thanh vừa tạo",
       "web-speech": "Đang đọc bằng giọng tổng hợp của thiết bị",
       "none": "Không có âm thanh cho nội dung này",
-      "loading": "Đang chuẩn bị âm thanh...",
+      "loading": "Đang chuẩn bị âm thanh…",
       "error": "Phát âm thanh gặp lỗi"
     }
   },
   "offline": {
-    "download": "Tải gói offline",
-    "downloading": "Đang tải gói offline...",
-    "success": "Đã tải xong gói offline cho {{count}} điểm ({{lang}}).",
-    "error": "Không tải được gói offline. Vui lòng thử lại."
+    "download": "Tải nội dung offline",
+    "downloading": "Đang tải nội dung offline...",
+    "success": "Đã tải xong chữ + audio cho {{count}} điểm ({{lang}}).",
+    "error": "Không tải được nội dung offline. Vui lòng thử lại."
   },
   "geofence": {
     "watching": "Đang theo dõi vị trí để gợi ý âm thanh gần bạn...",
+    "locating": "Đang lấy vị trí GPS...",
+    "watchingNoNearby": "Đã có vị trí GPS nhưng chưa tải được điểm gần nhất.",
+    "nearest": "Gần nhất: {{name}} ({{distance}}) — cần vào trong {{radius}} m để tự phát.",
+    "inRange": "Đang trong vùng {{name}} ({{distance}}) — đang gợi ý thuyết minh...",
+    "cooldown": "Vừa gợi ý {{name}} gần đây — chờ hết cooldown rồi mới phát lại.",
+    "error": "Không lấy được vị trí. Kiểm tra quyền GPS rồi thử lại.",
     "disabled": "Chưa kích hoạt vị trí. Nhấn để bật gợi ý tự động.",
-    "enable": "Bật gợi ý theo vị trí",
-    "disable": "Tắt gợi ý theo vị trí",
+    "enable": "Bật vị trí",
+    "disable": "Tắt vị trí",
     "unsupported": "Thiết bị không hỗ trợ định vị.",
     "permissionDenied": "Bạn chưa cho phép truy cập vị trí.",
-    "newNarration": "Phát hiện điểm gần bạn: {{name}}",
-    "simulate": "Giả lập tại Dinh Độc Lập",
-    "simulateHint": "Đặt vị trí giả tại Dinh Độc Lập để thử thuyết minh (không cần GPS thật)"
+    "newNarration": "Phát hiện điểm gần bạn: {{name}}"
   },
   "map": {
     "loading": "Đang tải bản đồ...",
-    "locate": "Vị trí của tôi"
+    "mode": "Map",
+    "cloud": "Cloud",
+    "offline": "Offline",
+    "hybrid": "Hybrid",
+    "cloudHint": "Nền OSM, cần mạng.",
+    "offlineHint": "Nền vector từ hcm.pmtiles trên máy chủ local.",
+    "hybridHint": "Có mạng dùng OSM; mất mạng chuyển PMTiles.",
+    "offlinePackMissing": "Chưa có file hcm.pmtiles — tạm hiện nền OSM. Đặt pack vào wwwroot/static/maps/packs/current/ (xem docs/maps.md)."
+  },
+  "network": {
+    "offline": "Mất Internet — Hybrid đang dùng bản đồ offline.",
+    "online": "Đã có mạng trở lại.",
+    "dismiss": "Đóng"
   }
 }

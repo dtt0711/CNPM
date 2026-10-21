@@ -18,7 +18,7 @@ public static class FixtureHelpers
         string descriptionVi = "Mô tả mẫu bằng tiếng Việt.",
         Guid? id = null,
         PlaceCategory category = PlaceCategory.Landmark,
-        string district = "Quận 1")
+        string district = "Bến Thành")
     {
         return new Place
         {

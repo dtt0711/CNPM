@@ -5,7 +5,32 @@
   },
   "nav": {
     "map": "地図",
-    "places": "観光地"
+    "places": "観光地",
+    "saved": "保存"
+  },
+  "account": {
+    "signIn": "ログイン",
+    "signOut": "ログアウト",
+    "admin": "管理画面"
+  },
+  "saved": {
+    "title": "保存",
+    "login": "お気に入りと行程を使うにはログインしてください。",
+    "favorites": "お気に入り",
+    "tours": "行程",
+    "emptyFavorites": "お気に入りはまだありません。",
+    "emptyTours": "行程はまだありません。お気に入りから訪問順を作成できます。",
+    "composerHint": "2件以上選んでください。距離で順番を最適化します。",
+    "pickedCount": "{{count}}件選択中",
+    "needMoreFavorites": "行程を作る前にお気に入りを2件以上保存してください。",
+    "stopCount": "{{count}}地点",
+    "cancelCreate": "キャンセル",
+    "tourName": "行程名（例: ベンタインの午前）",
+    "untitledTour": "マイ行程",
+    "createTour": "行程を作成",
+    "deleteTour": "削除",
+    "needPlaces": "お気に入りを2件以上選んでください。",
+    "error": "保存できませんでした。ログインして再試行してください。"
   },
   "language": {
     "label": "言語",
@@ -21,10 +46,12 @@
     "empty": "観光地が見つかりません。",
     "error": "読み込みに失敗しました。もう一度お試しください。",
     "retry": "再試行",
-    "distance": "{{distance}} m",
-    "category": "カテゴリー",
-    "district": "区",
-    "rating": "{{rating}} / 5 ({{count}} 件のレビュー)",
+    "distanceHint": "現在のGPS位置からの距離",
+    "sortedByDistance": "近い順に並べています",
+    "ward": "坊",
+    "rating": "{{rating}} ({{count}})",
+    "reviewCount": "レビュー {{count}} 件",
+    "ratingWithLabel": "{{rating}}（レビュー {{count}} 件）",
     "viewDetail": "詳細を見る",
     "playNarration": "音声を再生"
   },
@@ -33,11 +60,15 @@
     "openingHours": "営業時間",
     "ticketPrice": "入場料",
     "address": "住所",
-    "noDescription": "この言語の説明はまだありません。"
+    "noDescription": "この言語の説明はまだありません。",
+    "playHint": "下のバーの「音声を再生」ボタンでガイドを聞けます。",
+    "translating": "選択した言語に翻訳しています…",
+    "fallbackLang": "予備言語を表示しています。数秒後にもう一度再生してください。",
+    "favorite": "保存",
+    "unfavorite": "保存済み"
   },
   "audio": {
     "play": "再生",
-    "pause": "一時停止",
     "stop": "停止",
     "status": {
       "idle": "準備完了",
@@ -51,22 +82,40 @@
     }
   },
   "offline": {
-    "download": "オフラインパックをダウンロード",
-    "downloading": "オフラインパックをダウンロード中...",
-    "success": "{{count}} 件の観光地のオフラインパックをダウンロードしました（{{lang}}）。",
-    "error": "オフラインパックのダウンロードに失敗しました。"
+    "download": "案内コンテンツをダウンロード",
+    "downloading": "案内コンテンツをダウンロード中...",
+    "success": "{{count}} 件のテキストと音声を保存しました（{{lang}}）。",
+    "error": "ダウンロードに失敗しました。"
   },
   "geofence": {
     "watching": "近くの音声ガイドを検知するため位置情報を監視しています...",
+    "locating": "GPSを取得しています...",
+    "watchingNoNearby": "位置は取得済みですが、3km以内に観光地がありません。",
+    "nearest": "最寄り: {{name}}（{{distance}}）— {{radius}} m以内に入ると自動再生されます。",
+    "inRange": "{{name}} の範囲内（{{distance}}）— ガイドを準備しています...",
+    "cooldown": "最近 {{name}} を案内しました。クールダウン後に再再生できます。",
+    "error": "位置情報を取得できません。GPSの許可を確認して再試行してください。",
     "disabled": "位置情報は無効です。タップして自動検知を有効にしてください。",
-    "enable": "位置ベースの通知を有効化",
-    "disable": "位置ベースの通知を無効化",
+    "enable": "位置を有効化",
+    "disable": "位置を無効化",
     "unsupported": "このデバイスは位置情報に対応していません。",
     "permissionDenied": "位置情報へのアクセスが許可されていません。",
     "newNarration": "近くの観光地を検知しました：{{name}}"
   },
   "map": {
     "loading": "地図を読み込み中...",
-    "locate": "現在地"
+    "mode": "地図",
+    "cloud": "Cloud",
+    "offline": "Offline",
+    "hybrid": "Hybrid",
+    "cloudHint": "OSM（ネットが必要）",
+    "offlineHint": "ローカルの hcm.pmtiles",
+    "hybridHint": "オンラインは OSM、切断時は PMTiles",
+    "offlinePackMissing": "hcm.pmtiles がありません — 当面 OSM を表示します。packs/current/ に配置してください（docs/maps.md）。"
+  },
+  "network": {
+    "offline": "インターネットなし — オフライン地図に切り替えます。",
+    "online": "接続が復帰しました。",
+    "dismiss": "閉じる"
   }
 }

@@ -27,6 +27,24 @@ services:
       timeout: 3s
       retries: 10
 
+  providers:
+    build:
+      context: ./services/providers
+      dockerfile: Dockerfile
+    container_name: tourismhcm-providers
+    environment:
+      PROVIDERS_CACHE_DIR: /data/cache
+    volumes:
+      - providers_cache:/data/cache
+    ports:
+      - "8090:8090"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8090/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
   api:
     build:
       context: .
@@ -37,6 +55,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      providers:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
@@ -45,15 +65,23 @@ services:
       Jwt__Issuer: TourismHcm
       Jwt__Audience: TourismHcm.Client
       Jwt__SigningKey: "${JWT_SIGNING_KEY:-DevOnly_ChangeMe_UseAtLeast32Chars_LongKey!}"
-      Jwt__AccessTokenMinutes: "15"
+      Jwt__AccessTokenMinutes: "30"
       Jwt__RefreshTokenDays: "7"
       Admin__Email: "${ADMIN_EMAIL:-admin@tourismhcm.local}"
       Admin__Password: "${ADMIN_PASSWORD:-Admin123!ChangeMe}"
-      Translation__Provider: "${TRANSLATION_PROVIDER:-Fake}"
+      Translation__Provider: "${TRANSLATION_PROVIDER:-Free}"
       Translation__ApiKey: "${GOOGLE_TRANSLATION_API_KEY:-}"
-      Speech__Provider: "${SPEECH_PROVIDER:-Fake}"
+      Speech__Provider: "${SPEECH_PROVIDER:-Edge}"
       Speech__AzureKey: "${AZURE_SPEECH_KEY:-}"
       Speech__AzureRegion: "${AZURE_SPEECH_REGION:-}"
+      Providers__BaseUrl: "http://providers:8090"
+      Providers__TimeoutSeconds: "60"
+      Ai__GeminiApiKey: "${GEMINI_API_KEY:-}"
+      Ai__ProxyPalBaseUrl: "${PROXYPAL_BASE_URL:-}"
+      Ai__OwnerDailyLimit: "10"
+      MapPack__DataDir: /app/wwwroot/static/maps
+      MapPack__DefaultScope: hcm
+      Pii__EncryptionKey: "${PII_ENCRYPTION_KEY:-}"
       AudioStorage__RootPath: /app/audio-storage
       AudioStorage__PublicBaseUrl: /audio
       Cors__AllowedOrigins__0: "http://localhost:5173"
@@ -62,6 +90,8 @@ services:
       - "8080:8080"
     volumes:
       - audio_data:/app/audio-storage
+      # Bind-mount so Docker sees the same PMTiles/fonts as `dotnet run` (named volume was empty).
+      - ./src/TourismHcm.Api/wwwroot/static/maps:/app/wwwroot/static/maps
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health || exit 1"]
       interval: 15s
@@ -107,3 +137,4 @@ services:
 volumes:
   sql_data:
   audio_data:
+  providers_cache:

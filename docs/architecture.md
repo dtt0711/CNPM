@@ -17,6 +17,9 @@ flowchart TB
   subgraph data [Lớp 3 - Data Access]
     Infra[TourismHcm.Infrastructure<br/>EF / Repos / Providers / JWT]
   end
+  subgraph sidecar [Sidecar]
+    Prov[services/providers<br/>Edge-TTS + deep-translator]
+  end
 
   Api --> App
   Api -.->|composition root only<br/>AddInfrastructure| Infra
@@ -24,7 +27,10 @@ flowchart TB
   App --> Contracts
   Contracts --> Dom
   Infra --> App
+  Infra -->|HTTP| Prov
 ```
+
+Platform extras (HTML parity, domain TourismHcm): RBAC permissions, Admin portal, Gemini AI, PMTiles maps (`docs/maps.md`), analytics consent, UI bundles, localization on-demand/warmup.
 
 Rules enforced by `TourismHcm.ArchitectureTests`:
 
@@ -94,5 +100,6 @@ Rollback of a container image does **not** undo SQL. Every migration must remain
 
 | Environment | Missing Google/Azure keys |
 |-------------|---------------------------|
-| Development / Testing | Fake providers allowed |
-| Production | Real providers registered with `IsConfigured=false` → **503** ProblemDetails, never fake data |
+| Development | Sidecar **Free** translate + **Edge** TTS (`providers` on :8090) |
+| Testing | Fake stubs (no network sidecar) |
+| Production | Real providers; `IsConfigured=false` → **503** ProblemDetails, never fake data |

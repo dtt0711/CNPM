@@ -1,10 +1,10 @@
-using Mapster;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TourismHcm.Application.Abstractions.Providers;
 using TourismHcm.Application.Abstractions.Repositories;
 using TourismHcm.Application.Abstractions.Services;
 using TourismHcm.Application.Options;
+using System.Security.Cryptography;
 using TourismHcm.Contracts.Audio;
 using TourismHcm.Domain.Constants;
 using TourismHcm.Domain.Entities;
@@ -24,6 +24,7 @@ public sealed class AudioService : IAudioService
     private readonly ITextToSpeechProvider _ttsProvider;
     private readonly IAudioStorage _audioStorage;
     private readonly IAudioTaskQueue _audioTaskQueue;
+    private readonly IAudioTaskRuntime _audioTaskRuntime;
     private readonly IUnitOfWork _unitOfWork;
     private readonly AudioOptions _options;
     private readonly ILogger<AudioService> _logger;
@@ -37,6 +38,7 @@ public sealed class AudioService : IAudioService
         ITextToSpeechProvider ttsProvider,
         IAudioStorage audioStorage,
         IAudioTaskQueue audioTaskQueue,
+        IAudioTaskRuntime audioTaskRuntime,
         IUnitOfWork unitOfWork,
         IOptions<AudioOptions> options,
         ILogger<AudioService> logger)
@@ -49,6 +51,7 @@ public sealed class AudioService : IAudioService
         _ttsProvider = ttsProvider;
         _audioStorage = audioStorage;
         _audioTaskQueue = audioTaskQueue;
+        _audioTaskRuntime = audioTaskRuntime;
         _unitOfWork = unitOfWork;
         _options = options.Value;
         _logger = logger;
@@ -141,6 +144,7 @@ public sealed class AudioService : IAudioService
                 PlaceId = placeId,
                 Lang = normalizedLang,
                 Status = AudioTaskStatus.Done.ToString(),
+                ProgressPercent = 100,
                 CreatedAt = existingAsset.CreatedAt,
                 UpdatedAt = existingAsset.UpdatedAt,
                 CompletedAt = existingAsset.UpdatedAt
@@ -150,9 +154,9 @@ public sealed class AudioService : IAudioService
         var existingTask = await _audioTaskRepository.GetAsync(placeId, normalizedLang, ct);
         if (existingTask is not null
             && string.Equals(existingTask.ContentHash, contentHash, StringComparison.Ordinal)
-            && existingTask.Status is AudioTaskStatus.Pending or AudioTaskStatus.Running)
+            && existingTask.Status is AudioTaskStatus.Pending or AudioTaskStatus.Running or AudioTaskStatus.Paused)
         {
-            return existingTask.Adapt<AudioTaskDto>();
+            return ToDto(existingTask);
         }
 
         var now = DateTimeOffset.UtcNow;
@@ -173,7 +177,7 @@ public sealed class AudioService : IAudioService
 
         await _audioTaskQueue.EnqueueAsync(task.Id, ct);
 
-        return task.Adapt<AudioTaskDto>();
+        return ToDto(task);
     }
 
     public async Task<TtsStreamResult> StreamAsync(Guid placeId, string lang, CancellationToken ct = default)
@@ -200,6 +204,16 @@ public sealed class AudioService : IAudioService
 
     public async Task RegenerateAllLanguagesAsync(Guid placeId, CancellationToken ct = default)
     {
+        // Drop ready assets so RequestAudioAsync actually enqueues new TTS work
+        // (otherwise identical content-hash short-circuits as Done and Admin UI looks idle).
+        var assets = await _audioAssetRepository.GetByPlaceIdAsync(placeId, ct);
+        foreach (var asset in assets)
+        {
+            _audioAssetRepository.Remove(asset);
+        }
+
+        await _unitOfWork.SaveChangesAsync(ct);
+
         foreach (var lang in _options.PriorityLanguages)
         {
             try
@@ -217,7 +231,7 @@ public sealed class AudioService : IAudioService
     {
         var normalizedLang = AppLanguages.Normalize(lang);
         var task = await _audioTaskRepository.GetAsync(placeId, normalizedLang, ct);
-        return task?.Adapt<AudioTaskDto>();
+        return task is null ? null : ToDto(task);
     }
 
     public async Task ProcessTaskAsync(Guid taskId, CancellationToken ct = default)
@@ -225,7 +239,7 @@ public sealed class AudioService : IAudioService
         var task = await _audioTaskRepository.GetByIdAsync(taskId, ct)
             ?? throw new NotFoundException("AudioGenerationTask", taskId);
 
-        if (task.Status == AudioTaskStatus.Done)
+        if (task.Status is AudioTaskStatus.Done or AudioTaskStatus.Cancelled or AudioTaskStatus.Paused)
         {
             return;
         }
@@ -244,32 +258,31 @@ public sealed class AudioService : IAudioService
         task.UpdatedAt = DateTimeOffset.UtcNow;
         await _unitOfWork.SaveChangesAsync(ct);
 
+        var linkedCt = _audioTaskRuntime.Register(taskId, ct);
         try
         {
-            await EnsureTranslationAsync(task.PlaceId, task.Lang, ct);
-            var text = await GetTextAsync(place, task.Lang, ct);
+            await EnsureTranslationAsync(task.PlaceId, task.Lang, linkedCt);
+            var text = await GetTextAsync(place, task.Lang, linkedCt);
 
             if (!_ttsProvider.IsConfigured)
             {
                 throw new ProviderUnavailableException(_ttsProvider.ProviderName, "Text-to-speech provider is not configured.");
             }
 
-            // Fake TTS is silent — do not store "Ready" MP3 that would block client Web Speech.
-            if (string.Equals(_ttsProvider.ProviderName, "Fake", StringComparison.OrdinalIgnoreCase))
+            var audioBytes = await _ttsProvider.SynthesizeAsync(text, task.Lang, linkedCt);
+            linkedCt.ThrowIfCancellationRequested();
+
+            // Re-read status in case pause/cancel won the race after TTS finished.
+            var latest = await _audioTaskRepository.GetByIdAsync(taskId, ct);
+            if (latest is null || latest.Status is AudioTaskStatus.Cancelled or AudioTaskStatus.Paused)
             {
-                task.Status = AudioTaskStatus.Failed;
-                task.Error = "Fake TTS produces no audible audio; clients should use Web Speech API.";
-                task.CompletedAt = DateTimeOffset.UtcNow;
-                task.UpdatedAt = DateTimeOffset.UtcNow;
-                await _unitOfWork.SaveChangesAsync(ct);
                 return;
             }
 
-            var audioBytes = await _ttsProvider.SynthesizeAsync(text, task.Lang, ct);
-            var path = await _audioStorage.SaveAsync(task.PlaceId, task.Lang, task.ContentHash, audioBytes, ct);
+            var path = await _audioStorage.SaveAsync(task.PlaceId, task.Lang, task.ContentHash, audioBytes, linkedCt);
             var durationSec = EstimateDurationSeconds(text);
 
-            var existingAsset = await _audioAssetRepository.GetAsync(task.PlaceId, task.Lang, ct);
+            var existingAsset = await _audioAssetRepository.GetAsync(task.PlaceId, task.Lang, linkedCt);
             var now = DateTimeOffset.UtcNow;
 
             if (existingAsset is not null)
@@ -293,7 +306,7 @@ public sealed class AudioService : IAudioService
                     Status = AudioAssetStatus.Ready,
                     CreatedAt = now,
                     UpdatedAt = now
-                }, ct);
+                }, linkedCt);
             }
 
             task.Status = AudioTaskStatus.Done;
@@ -301,7 +314,24 @@ public sealed class AudioService : IAudioService
             task.CompletedAt = now;
             task.UpdatedAt = now;
 
-            await _unitOfWork.SaveChangesAsync(ct);
+            await _unitOfWork.SaveChangesAsync(linkedCt);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            // Pause/Cancel requested for this task (not host shutdown).
+            var latest = await _audioTaskRepository.GetByIdAsync(taskId, CancellationToken.None);
+            if (latest is null)
+            {
+                return;
+            }
+
+            if (latest.Status is not (AudioTaskStatus.Paused or AudioTaskStatus.Cancelled))
+            {
+                latest.Status = AudioTaskStatus.Paused;
+                latest.Error = "Paused.";
+                latest.UpdatedAt = DateTimeOffset.UtcNow;
+                await _unitOfWork.SaveChangesAsync(CancellationToken.None);
+            }
         }
         catch (Exception ex)
         {
@@ -319,6 +349,104 @@ public sealed class AudioService : IAudioService
                 await _audioTaskQueue.EnqueueAsync(task.Id, ct);
             }
         }
+        finally
+        {
+            _audioTaskRuntime.Unregister(taskId);
+        }
+    }
+
+    public async Task<AudioPackManifestDto> GetPackManifestAsync(string lang, CancellationToken ct = default)
+    {
+        var normalizedLang = AppLanguages.Normalize(lang);
+        var assets = await _audioAssetRepository.GetReadyByLangAsync(normalizedLang, ct);
+        var files = new List<AudioPackFileDto>(assets.Count);
+
+        foreach (var asset in assets)
+        {
+            var sha256 = await ComputeSha256Async(asset.Path, ct) ?? asset.ContentHash;
+            files.Add(new AudioPackFileDto
+            {
+                PlaceId = asset.PlaceId,
+                Path = asset.Path,
+                Sha256 = sha256
+            });
+        }
+
+        return new AudioPackManifestDto { Lang = normalizedLang, Files = files };
+    }
+
+    public async Task<AudioTaskDto> CancelTaskAsync(Guid taskId, CancellationToken ct = default)
+    {
+        var task = await _audioTaskRepository.GetByIdAsync(taskId, ct)
+            ?? throw new NotFoundException("AudioGenerationTask", taskId);
+
+        if (task.Status is AudioTaskStatus.Done or AudioTaskStatus.Cancelled)
+        {
+            return ToDto(task);
+        }
+
+        _audioTaskRuntime.TryCancel(taskId);
+        task.Status = AudioTaskStatus.Cancelled;
+        task.Error = "Cancelled by user.";
+        task.CompletedAt = DateTimeOffset.UtcNow;
+        task.UpdatedAt = DateTimeOffset.UtcNow;
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        return ToDto(task);
+    }
+
+    public async Task<AudioTaskDto> PauseTaskAsync(Guid taskId, CancellationToken ct = default)
+    {
+        var task = await _audioTaskRepository.GetByIdAsync(taskId, ct)
+            ?? throw new NotFoundException("AudioGenerationTask", taskId);
+
+        if (task.Status is AudioTaskStatus.Done or AudioTaskStatus.Failed or AudioTaskStatus.Cancelled)
+        {
+            return ToDto(task);
+        }
+
+        if (task.Status == AudioTaskStatus.Paused)
+        {
+            return ToDto(task);
+        }
+
+        _audioTaskRuntime.TryCancel(taskId);
+        task.Status = AudioTaskStatus.Paused;
+        task.Error = "Paused.";
+        task.UpdatedAt = DateTimeOffset.UtcNow;
+        await _unitOfWork.SaveChangesAsync(ct);
+        return ToDto(task);
+    }
+
+    public async Task<AudioTaskDto> ResumeTaskAsync(Guid taskId, CancellationToken ct = default)
+    {
+        var task = await _audioTaskRepository.GetByIdAsync(taskId, ct)
+            ?? throw new NotFoundException("AudioGenerationTask", taskId);
+
+        if (task.Status is not (AudioTaskStatus.Paused or AudioTaskStatus.Failed))
+        {
+            return ToDto(task);
+        }
+
+        task.Status = AudioTaskStatus.Pending;
+        task.Error = null;
+        task.CompletedAt = null;
+        task.UpdatedAt = DateTimeOffset.UtcNow;
+        await _unitOfWork.SaveChangesAsync(ct);
+        await _audioTaskQueue.EnqueueAsync(task.Id, ct);
+        return ToDto(task);
+    }
+
+    public async Task<IReadOnlyList<AudioTaskDto>> ListActiveTasksAsync(CancellationToken ct = default)
+    {
+        var tasks = await _audioTaskRepository.GetActiveAsync(ct);
+        return tasks.Select(ToDto).ToList();
+    }
+
+    public async Task<IReadOnlyList<AudioTaskDto>> ListRecentTasksAsync(int take = 50, CancellationToken ct = default)
+    {
+        var tasks = await _audioTaskRepository.GetRecentAsync(take, ct);
+        return tasks.Select(ToDto).ToList();
     }
 
     public async Task RecoverPendingTasksAsync(CancellationToken ct = default)
@@ -348,6 +476,32 @@ public sealed class AudioService : IAudioService
         }
     }
 
+    private static AudioTaskDto ToDto(AudioGenerationTask task) => new()
+    {
+        Id = task.Id,
+        PlaceId = task.PlaceId,
+        PlaceName = task.Place?.Name,
+        Lang = task.Lang,
+        Status = task.Status.ToString(),
+        Attempts = task.Attempts,
+        Error = task.Error,
+        ProgressPercent = ProgressOf(task.Status),
+        CreatedAt = task.CreatedAt,
+        UpdatedAt = task.UpdatedAt,
+        CompletedAt = task.CompletedAt
+    };
+
+    private static int ProgressOf(AudioTaskStatus status) => status switch
+    {
+        AudioTaskStatus.Pending => 5,
+        AudioTaskStatus.Running => 55,
+        AudioTaskStatus.Paused => 40,
+        AudioTaskStatus.Done => 100,
+        AudioTaskStatus.Failed => 100,
+        AudioTaskStatus.Cancelled => 100,
+        _ => 0
+    };
+
     private async Task<string> GetTextAsync(Place place, string normalizedLang, CancellationToken ct)
     {
         if (string.Equals(normalizedLang, AppLanguages.Vietnamese, StringComparison.OrdinalIgnoreCase))
@@ -357,6 +511,18 @@ public sealed class AudioService : IAudioService
 
         var translation = await _translationRepository.GetAsync(place.Id, normalizedLang, ct);
         return translation?.Text ?? place.DescriptionVi;
+    }
+
+    private async Task<string?> ComputeSha256Async(string path, CancellationToken ct)
+    {
+        await using var stream = await _audioStorage.OpenReadAsync(path, ct);
+        if (stream is null)
+        {
+            return null;
+        }
+
+        var hash = await SHA256.HashDataAsync(stream, ct);
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
     private static double EstimateDurationSeconds(string text)

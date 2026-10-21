@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using TourismHcm.Application.Abstractions.Providers;
 using TourismHcm.Application.Options;
 using TourismHcm.Contracts.Auth;
+using TourismHcm.Domain.Constants;
 using TourismHcm.Domain.Entities;
 
 namespace TourismHcm.Infrastructure.Providers.Security;
@@ -24,11 +25,16 @@ public sealed class JwtTokenService : IJwtTokenService
     }
 
     public AuthResponse CreateTokens(
-        User user, IEnumerable<string> roles, string refreshToken, DateTimeOffset refreshTokenExpiresAt)
+        User user,
+        IEnumerable<string> roles,
+        IEnumerable<string> permissions,
+        string refreshToken,
+        DateTimeOffset refreshTokenExpiresAt)
     {
         var roleList = roles.ToList();
+        var permissionList = permissions.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         var accessTokenExpiresAt = DateTimeOffset.UtcNow.AddMinutes(_options.AccessTokenMinutes);
-        var accessToken = BuildAccessToken(user, roleList, accessTokenExpiresAt);
+        var accessToken = BuildAccessToken(user, roleList, permissionList, accessTokenExpiresAt);
 
         return new AuthResponse
         {
@@ -36,6 +42,7 @@ public sealed class JwtTokenService : IJwtTokenService
             Email = user.Email,
             DisplayName = user.DisplayName,
             Roles = roleList,
+            Permissions = permissionList,
             AccessToken = accessToken,
             AccessTokenExpiresAt = accessTokenExpiresAt,
             RefreshToken = refreshToken,
@@ -75,7 +82,7 @@ public sealed class JwtTokenService : IJwtTokenService
         }
     }
 
-    public IEnumerable<Claim> BuildUserClaims(User user, IEnumerable<string> roles)
+    public IEnumerable<Claim> BuildUserClaims(User user, IEnumerable<string> roles, IEnumerable<string> permissions)
     {
         var claims = new List<Claim>
         {
@@ -86,11 +93,13 @@ public sealed class JwtTokenService : IJwtTokenService
         };
 
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+        claims.AddRange(permissions.Select(p => new Claim(JwtClaimTypes.Permission, p)));
 
         return claims;
     }
 
-    private string BuildAccessToken(User user, IEnumerable<string> roles, DateTimeOffset expiresAt)
+    private string BuildAccessToken(
+        User user, IEnumerable<string> roles, IEnumerable<string> permissions, DateTimeOffset expiresAt)
     {
         var signingKey = BuildSigningKey();
         var credentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
@@ -98,7 +107,7 @@ public sealed class JwtTokenService : IJwtTokenService
         var token = new JwtSecurityToken(
             issuer: _options.Issuer,
             audience: _options.Audience,
-            claims: BuildUserClaims(user, roles),
+            claims: BuildUserClaims(user, roles, permissions),
             notBefore: DateTime.UtcNow,
             expires: expiresAt.UtcDateTime,
             signingCredentials: credentials);

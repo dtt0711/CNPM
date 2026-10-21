@@ -16,6 +16,7 @@ public sealed class AuthService : IAuthService
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtTokenService _jwtTokenService;
+    private readonly IPermissionService _permissionService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly JwtOptions _jwtOptions;
 
@@ -23,12 +24,14 @@ public sealed class AuthService : IAuthService
         IUserRepository userRepository,
         IPasswordHasher passwordHasher,
         IJwtTokenService jwtTokenService,
+        IPermissionService permissionService,
         IUnitOfWork unitOfWork,
         IOptions<JwtOptions> jwtOptions)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _jwtTokenService = jwtTokenService;
+        _permissionService = permissionService;
         _unitOfWork = unitOfWork;
         _jwtOptions = jwtOptions.Value;
     }
@@ -56,11 +59,11 @@ public sealed class AuthService : IAuthService
             CreatedAt = now
         };
 
-        user.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = role.Id });
+        user.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = role.Id, Role = role });
 
         await _userRepository.AddAsync(user, ct);
 
-        var response = await IssueTokensAsync(user, [AppRoles.User], ct);
+        var response = await IssueTokensAsync(user, user, [AppRoles.User], ct);
 
         await _unitOfWork.SaveChangesAsync(ct);
 
@@ -83,7 +86,7 @@ public sealed class AuthService : IAuthService
         }
 
         var roles = user.UserRoles.Select(ur => ur.Role.Name).ToArray();
-        var response = await IssueTokensAsync(user, roles, ct);
+        var response = await IssueTokensAsync(user, user, roles, ct);
 
         await _unitOfWork.SaveChangesAsync(ct);
 
@@ -109,7 +112,7 @@ public sealed class AuthService : IAuthService
         }
 
         var roles = user.UserRoles.Select(ur => ur.Role.Name).ToArray();
-        var response = await IssueTokensAsync(user, roles, ct);
+        var response = await IssueTokensAsync(user, user, roles, ct);
 
         var now = DateTimeOffset.UtcNow;
         existingToken.RevokedAt = now;
@@ -134,7 +137,8 @@ public sealed class AuthService : IAuthService
         await _unitOfWork.SaveChangesAsync(ct);
     }
 
-    private async Task<AuthResponse> IssueTokensAsync(User user, IEnumerable<string> roles, CancellationToken ct)
+    private async Task<AuthResponse> IssueTokensAsync(
+        User user, User userWithRoles, IEnumerable<string> roles, CancellationToken ct)
     {
         var rawRefreshToken = _jwtTokenService.GenerateRefreshToken();
         var refreshExpiresAt = DateTimeOffset.UtcNow.AddDays(_jwtOptions.RefreshTokenDays);
@@ -148,6 +152,10 @@ public sealed class AuthService : IAuthService
             CreatedAt = DateTimeOffset.UtcNow
         }, ct);
 
-        return _jwtTokenService.CreateTokens(user, roles, rawRefreshToken, refreshExpiresAt);
+        var roleList = roles.ToList();
+        var permissionsJson = userWithRoles.UserRoles.Select(ur => ur.Role.PermissionsJson);
+        var permissions = _permissionService.ResolvePermissions(roleList, permissionsJson);
+
+        return _jwtTokenService.CreateTokens(user, roleList, permissions, rawRefreshToken, refreshExpiresAt);
     }
 }

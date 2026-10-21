@@ -71,7 +71,8 @@ public sealed class AudioController : ControllerBase
             await WriteEventAsync("status", task, ct);
 
             if (string.Equals(task.Status, AudioTaskStatus.Done.ToString(), StringComparison.OrdinalIgnoreCase)
-                || string.Equals(task.Status, AudioTaskStatus.Failed.ToString(), StringComparison.OrdinalIgnoreCase))
+                || string.Equals(task.Status, AudioTaskStatus.Failed.ToString(), StringComparison.OrdinalIgnoreCase)
+                || string.Equals(task.Status, AudioTaskStatus.Cancelled.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
@@ -117,6 +118,30 @@ public sealed class AudioController : ControllerBase
         await _audioService.RegenerateAllLanguagesAsync(placeId, ct);
         return Accepted();
     }
+
+    [HttpGet("pack-manifest")]
+    [AllowAnonymous]
+    public async Task<ActionResult<AudioPackManifestDto>> GetPackManifest([FromQuery] string lang, CancellationToken ct)
+    {
+        return Ok(await _audioService.GetPackManifestAsync(lang, ct));
+    }
+
+    [HttpPost("tasks/{taskId:guid}/cancel")]
+    [Authorize(Policy = "RequireEditor")]
+    public async Task<ActionResult<AudioTaskDto>> CancelTask(Guid taskId, CancellationToken ct)
+    {
+        return Ok(await _audioService.CancelTaskAsync(taskId, ct));
+    }
+
+    [HttpPost("tasks/{taskId:guid}/pause")]
+    [Authorize(Policy = "RequireEditor")]
+    public async Task<ActionResult<AudioTaskDto>> PauseTask(Guid taskId, CancellationToken ct) =>
+        Ok(await _audioService.PauseTaskAsync(taskId, ct));
+
+    [HttpPost("tasks/{taskId:guid}/resume")]
+    [Authorize(Policy = "RequireEditor")]
+    public async Task<ActionResult<AudioTaskDto>> ResumeTask(Guid taskId, CancellationToken ct) =>
+        Ok(await _audioService.ResumeTaskAsync(taskId, ct));
 
     private async Task WriteEventAsync(string eventName, object payload, CancellationToken ct)
     {

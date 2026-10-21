@@ -13,6 +13,11 @@ public sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
         builder.HasKey(r => r.Id);
 
         builder.Property(r => r.Name).HasMaxLength(50).IsRequired();
+        builder.Property(r => r.PermissionsJson)
+            .IsRequired()
+            .HasColumnType("nvarchar(max)")
+            .HasDefaultValue("[]");
+        builder.Property(r => r.Priority);
 
         builder.HasIndex(r => r.Name).IsUnique();
     }

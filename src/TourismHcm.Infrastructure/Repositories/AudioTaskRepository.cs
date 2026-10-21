@@ -31,4 +31,26 @@ public sealed class AudioTaskRepository : IAudioTaskRepository
         await _dbContext.AudioGenerationTasks
             .Where(t => t.Status == AudioTaskStatus.Pending || t.Status == AudioTaskStatus.Running)
             .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<AudioGenerationTask>> GetActiveAsync(CancellationToken ct = default) =>
+        await _dbContext.AudioGenerationTasks
+            .AsNoTracking()
+            .Include(t => t.Place)
+            .Where(t =>
+                t.Status == AudioTaskStatus.Pending
+                || t.Status == AudioTaskStatus.Running
+                || t.Status == AudioTaskStatus.Paused)
+            .OrderByDescending(t => t.UpdatedAt)
+            .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<AudioGenerationTask>> GetRecentAsync(int take, CancellationToken ct = default)
+    {
+        var limit = take <= 0 ? 50 : Math.Min(take, 200);
+        return await _dbContext.AudioGenerationTasks
+            .AsNoTracking()
+            .Include(t => t.Place)
+            .OrderByDescending(t => t.UpdatedAt)
+            .Take(limit)
+            .ToListAsync(ct);
+    }
 }

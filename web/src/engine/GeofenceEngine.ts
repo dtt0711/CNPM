@@ -188,6 +188,53 @@ export class GeofenceEngine {
     }
   }
 
+  /**
+   * Demo/simulate helper: skip debounce + client cooldown and play narration
+   * whenever the API returns a narration payload (even if server cooldown
+   * set triggered=false).
+   */
+  async forceCheck(position: GeoPosition): Promise<void> {
+    if (this.disposed) return;
+    this.pendingPosition = position;
+    if (this.debounceTimer !== null) {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = null;
+    }
+    if (this.throttleTimer !== null) {
+      clearTimeout(this.throttleTimer);
+      this.throttleTimer = null;
+    }
+
+    this.lastCheckAt = this.now();
+    const generation = this.generation;
+    const lang = this.lang;
+    this.triggerCallCount += 1;
+
+    try {
+      const result = await this.fetchTrigger({
+        lat: position.lat,
+        lng: position.lng,
+        lang,
+        clientId: this.clientId,
+      });
+      if (this.disposed || generation !== this.generation) return;
+      if (!result?.narration) return;
+
+      const key = `${this.clientId}:${result.placeId}`;
+      this.lastTriggeredAt.set(key, this.now());
+      this.onNarration({
+        source: "geofence",
+        placeId: result.placeId,
+        lang,
+        narration: result.narration,
+      });
+    } catch (error) {
+      if (!this.disposed && generation === this.generation) {
+        this.onError?.(error, { operation: "forceCheck" });
+      }
+    }
+  }
+
   /** Clears all pending timers. The engine must not be used after this. */
   dispose(): void {
     this.disposed = true;

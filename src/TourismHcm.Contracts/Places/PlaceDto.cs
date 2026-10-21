@@ -6,7 +6,7 @@ public record PlaceDto
     public string Name { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
     public string Category { get; init; } = string.Empty;
-    public string District { get; init; } = string.Empty;
+    public string Ward { get; init; } = string.Empty;
     public string Address { get; init; } = string.Empty;
     public double Latitude { get; init; }
     public double Longitude { get; init; }

@@ -17,13 +17,18 @@ public sealed class AuthController : ControllerBase
     private readonly IAuthService _authService;
     private readonly IValidator<RegisterRequest> _registerValidator;
     private readonly IValidator<LoginRequest> _loginValidator;
+    private readonly IWebHostEnvironment _environment;
 
     public AuthController(
-        IAuthService authService, IValidator<RegisterRequest> registerValidator, IValidator<LoginRequest> loginValidator)
+        IAuthService authService,
+        IValidator<RegisterRequest> registerValidator,
+        IValidator<LoginRequest> loginValidator,
+        IWebHostEnvironment environment)
     {
         _authService = authService;
         _registerValidator = registerValidator;
         _loginValidator = loginValidator;
+        _environment = environment;
     }
 
     /// <summary>Registers a new user account.</summary>
@@ -43,6 +48,7 @@ public sealed class AuthController : ControllerBase
         await _loginValidator.ValidateAndThrowDomainAsync(request, ct);
 
         var result = await _authService.LoginAsync(request, ct);
+        AuthCookieWriter.SetAuthCookies(Response, result, _environment.IsDevelopment());
         return Ok(result);
     }
 
@@ -51,6 +57,7 @@ public sealed class AuthController : ControllerBase
     public async Task<ActionResult<AuthResponse>> Refresh([FromBody] RefreshRequest request, CancellationToken ct)
     {
         var result = await _authService.RefreshAsync(request, ct);
+        AuthCookieWriter.SetAuthCookies(Response, result, _environment.IsDevelopment());
         return Ok(result);
     }
 
@@ -59,6 +66,7 @@ public sealed class AuthController : ControllerBase
     public async Task<IActionResult> Logout([FromBody] RefreshRequest request, CancellationToken ct)
     {
         await _authService.LogoutAsync(request.RefreshToken, ct);
+        AuthCookieWriter.ClearAuthCookies(Response, _environment.IsDevelopment());
         return NoContent();
     }
 }

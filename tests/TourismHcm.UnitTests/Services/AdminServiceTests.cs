@@ -17,12 +17,19 @@ public sealed class AdminServiceTests
     private readonly IPlaceRepository _placeRepository = Substitute.For<IPlaceRepository>();
     private readonly ITranslationRepository _translationRepository = Substitute.For<ITranslationRepository>();
     private readonly IAuditLogRepository _auditLogRepository = Substitute.For<IAuditLogRepository>();
+    private readonly IPlatformRepository _platformRepository = Substitute.For<IPlatformRepository>();
     private readonly IAudioService _audioService = Substitute.For<IAudioService>();
     private readonly IPlaceService _placeService = Substitute.For<IPlaceService>();
     private readonly IUnitOfWork _unitOfWork = FakeProviders.CreateUnitOfWork();
 
     private AdminService CreateSut() => new(
-        _placeRepository, _translationRepository, _auditLogRepository, _audioService, _placeService, _unitOfWork);
+        _placeRepository,
+        _translationRepository,
+        _auditLogRepository,
+        _platformRepository,
+        _audioService,
+        _placeService,
+        _unitOfWork);
 
     [Fact]
     public async Task ApprovePlaceAsync_WhenPlaceMissing_ThrowsNotFound()

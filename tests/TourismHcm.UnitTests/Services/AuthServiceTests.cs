@@ -2,6 +2,7 @@ using FluentAssertions;
 using NSubstitute;
 using TourismHcm.Application.Abstractions.Providers;
 using TourismHcm.Application.Abstractions.Repositories;
+using TourismHcm.Application.Abstractions.Services;
 using TourismHcm.Application.Options;
 using TourismHcm.Application.Services;
 using TourismHcm.Contracts.Auth;
@@ -18,6 +19,7 @@ public sealed class AuthServiceTests
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly IPasswordHasher _passwordHasher = Substitute.For<IPasswordHasher>();
     private readonly IJwtTokenService _jwtTokenService = Substitute.For<IJwtTokenService>();
+    private readonly IPermissionService _permissionService = Substitute.For<IPermissionService>();
     private readonly IUnitOfWork _unitOfWork = FakeProviders.CreateUnitOfWork();
     private readonly JwtOptions _jwtOptions = new();
 
@@ -27,8 +29,17 @@ public sealed class AuthServiceTests
         // real crypto-random implementation closely enough to exercise rotation logic.
         _jwtTokenService.GenerateRefreshToken().Returns(_ => Guid.NewGuid().ToString("N"));
 
+        _permissionService
+            .ResolvePermissions(Arg.Any<IEnumerable<string>>(), Arg.Any<IEnumerable<string?>>())
+            .Returns(Array.Empty<string>());
+
         _jwtTokenService
-            .CreateTokens(Arg.Any<User>(), Arg.Any<IEnumerable<string>>(), Arg.Any<string>(), Arg.Any<DateTimeOffset>())
+            .CreateTokens(
+                Arg.Any<User>(),
+                Arg.Any<IEnumerable<string>>(),
+                Arg.Any<IEnumerable<string>>(),
+                Arg.Any<string>(),
+                Arg.Any<DateTimeOffset>())
             .Returns(call => new AuthResponse
             {
                 UserId = call.ArgAt<User>(0).Id,
@@ -37,13 +48,18 @@ public sealed class AuthServiceTests
                 Roles = call.ArgAt<IEnumerable<string>>(1).ToArray(),
                 AccessToken = "access-token",
                 AccessTokenExpiresAt = DateTimeOffset.UtcNow.AddMinutes(15),
-                RefreshToken = call.ArgAt<string>(2),
-                RefreshTokenExpiresAt = call.ArgAt<DateTimeOffset>(3),
+                RefreshToken = call.ArgAt<string>(3),
+                RefreshTokenExpiresAt = call.ArgAt<DateTimeOffset>(4),
             });
     }
 
     private AuthService CreateSut() => new(
-        _userRepository, _passwordHasher, _jwtTokenService, _unitOfWork, OptionsFactory.Create(_jwtOptions));
+        _userRepository,
+        _passwordHasher,
+        _jwtTokenService,
+        _permissionService,
+        _unitOfWork,
+        OptionsFactory.Create(_jwtOptions));
 
     // ---------- RegisterAsync ----------
 
@@ -140,7 +156,7 @@ public sealed class AuthServiceTests
     public async Task LoginAsync_WhenCredentialsValid_IssuesTokensWithUserRoles()
     {
         var user = EntityFactory.CreateUser();
-        var role = EntityFactory.CreateRole(AppRoles.Editor);
+        var role = EntityFactory.CreateRole(AppRoles.EditorLegacyName);
         user.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = role.Id, User = user, Role = role });
 
         _userRepository.GetByEmailWithRolesAsync(user.Email, Arg.Any<CancellationToken>()).Returns(user);
@@ -150,7 +166,7 @@ public sealed class AuthServiceTests
         var result = await sut.LoginAsync(new LoginRequest { Email = user.Email, Password = "correct" });
 
         result.UserId.Should().Be(user.Id);
-        result.Roles.Should().Contain(AppRoles.Editor);
+        result.Roles.Should().Contain(AppRoles.EditorLegacyName);
         result.AccessToken.Should().NotBeNullOrEmpty();
         result.RefreshToken.Should().NotBeNullOrEmpty();
     }

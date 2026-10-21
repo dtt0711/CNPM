@@ -23,10 +23,10 @@ public sealed class UpdatePlaceRequestValidator : AbstractValidator<UpdatePlaceR
             .WithMessage("Category must be one of: " + string.Join(", ", Enum.GetNames<PlaceCategory>()))
             .When(x => x.Category is not null);
 
-        RuleFor(x => x.District)
+        RuleFor(x => x.Ward)
             .NotEmpty()
             .MaximumLength(100)
-            .When(x => x.District is not null);
+            .When(x => x.Ward is not null);
 
         RuleFor(x => x.Address)
             .NotEmpty()

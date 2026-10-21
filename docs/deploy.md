@@ -45,7 +45,7 @@ docker compose up --build -d
 curl http://localhost:8080/health/ready
 ```
 
-Dev uses `ASPNETCORE_ENVIRONMENT=Development` so Fake TTS/Translation are allowed when keys are empty. For production-like behavior:
+Compose Development uses the `providers` sidecar (Edge TTS + Free translate). Fake stubs are Testing-only. For production-like behavior:
 
 ```bash
 # in compose override

@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using Asp.Versioning;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
@@ -72,12 +73,12 @@ builder.Services.AddCors(options =>
     {
         if (allowedOrigins.Length > 0)
         {
-            policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
+            policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
         }
         else if (builder.Environment.IsDevelopment())
         {
-            // Dev convenience only: no explicit origins configured, allow anything locally.
-            policy.SetIsOriginAllowed(_ => true).AllowAnyHeader().AllowAnyMethod();
+            // Dev convenience: allow any origin with credentials (cookie auth + Vite).
+            policy.SetIsOriginAllowed(_ => true).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
         }
         else
         {
@@ -143,6 +144,47 @@ app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(audioRoot),
     RequestPath = audioStorageOptions.PublicBaseUrl,
+});
+
+// ---------- Static map packs (PMTiles / styles / fonts) ----------
+var mapPackOptions = app.Services.GetRequiredService<IOptions<MapPackOptions>>().Value;
+var mapRoot = Path.IsPathRooted(mapPackOptions.DataDir)
+    ? mapPackOptions.DataDir
+    : Path.Combine(app.Environment.ContentRootPath, mapPackOptions.DataDir);
+Directory.CreateDirectory(mapRoot);
+
+// .pmtiles is not in the default MIME map — without this, StaticFiles returns 404
+// even when the file exists on disk.
+var mapContentTypes = new FileExtensionContentTypeProvider();
+mapContentTypes.Mappings[".pmtiles"] = "application/vnd.pmtiles";
+mapContentTypes.Mappings[".pbf"] = "application/x-protobuf";
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(mapRoot),
+    RequestPath = "/static/maps",
+    ContentTypeProvider = mapContentTypes,
+    OnPrepareResponse = ctx =>
+    {
+        var path = ctx.File.Name;
+        if (path.EndsWith(".pmtiles", StringComparison.OrdinalIgnoreCase)
+            || path.EndsWith(".pbf", StringComparison.OrdinalIgnoreCase))
+        {
+            ctx.Context.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+            // PMTiles clients use HTTP Range requests
+            ctx.Context.Response.Headers.AcceptRanges = "bytes";
+        }
+        else if (path.EndsWith("manifest.json", StringComparison.OrdinalIgnoreCase))
+        {
+            ctx.Context.Response.Headers.CacheControl = "no-cache";
+        }
+    },
+});
+
+// Also serve default wwwroot (styles committed under wwwroot/static/maps).
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = mapContentTypes,
 });
 
 // ---------- Database bootstrap (never auto-migrate in Production) ----------

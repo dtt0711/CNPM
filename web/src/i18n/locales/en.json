@@ -5,7 +5,32 @@
   },
   "nav": {
     "map": "Map",
-    "places": "Places"
+    "places": "Places",
+    "saved": "Saved"
+  },
+  "account": {
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "admin": "Admin console"
+  },
+  "saved": {
+    "title": "Saved",
+    "login": "Sign in to save favorites and create an itinerary.",
+    "favorites": "Favorites",
+    "tours": "Itinerary",
+    "emptyFavorites": "No favorites yet. Open a place and tap Save.",
+    "emptyTours": "No itinerary yet. Build one from your favorites to remember visit order.",
+    "composerHint": "Pick at least two places. Order is optimized by distance.",
+    "pickedCount": "{{count}} places selected",
+    "needMoreFavorites": "Save at least two favorites before creating an itinerary.",
+    "stopCount": "{{count}} stops",
+    "cancelCreate": "Cancel",
+    "tourName": "Name, e.g. Bến Thành morning",
+    "untitledTour": "My itinerary",
+    "createTour": "Create itinerary",
+    "deleteTour": "Delete",
+    "needPlaces": "Select at least two favorite places.",
+    "error": "Could not load or save. Sign in and try again."
   },
   "language": {
     "label": "Language",
@@ -21,10 +46,12 @@
     "empty": "No places found.",
     "error": "Couldn't load places. Please try again.",
     "retry": "Retry",
-    "distance": "{{distance}} m",
-    "category": "Category",
-    "district": "District",
-    "rating": "{{rating}} / 5 ({{count}} reviews)",
+    "distanceHint": "Distance from your current GPS position",
+    "sortedByDistance": "Sorted by nearest distance",
+    "ward": "Ward",
+    "rating": "{{rating}} ({{count}})",
+    "reviewCount": "{{count}} reviews",
+    "ratingWithLabel": "{{rating}} ({{count}} reviews)",
     "viewDetail": "View detail",
     "playNarration": "Play narration"
   },
@@ -33,42 +60,62 @@
     "openingHours": "Opening hours",
     "ticketPrice": "Ticket price",
     "address": "Address",
-    "noDescription": "No description available in this language yet."
+    "noDescription": "No description available in this language yet.",
+    "playHint": "Use the “Play narration” button in the bar below to hear the guide.",
+    "translating": "Translating content into the selected language…",
+    "fallbackLang": "Showing a fallback language. Try play again in a few seconds.",
+    "favorite": "Save",
+    "unfavorite": "Saved"
   },
   "audio": {
     "play": "Play",
-    "pause": "Pause",
     "stop": "Stop",
     "status": {
       "idle": "Ready",
-      "ready-url": "Playing available audio",
-      "poll-task": "Loaded recently finished audio",
-      "tts-stream": "Synthesized audio on demand",
+      "ready-url": "Playing audio",
+      "poll-task": "Generating / waiting for server audio…",
+      "tts-stream": "Playing freshly synthesized audio",
       "web-speech": "Reading aloud with device speech synthesis",
       "none": "No audio available for this content",
-      "loading": "Preparing audio...",
+      "loading": "Preparing audio…",
       "error": "Audio playback failed"
     }
   },
   "offline": {
-    "download": "Download offline pack",
-    "downloading": "Downloading offline pack...",
-    "success": "Downloaded offline pack for {{count}} places ({{lang}}).",
-    "error": "Could not download the offline pack. Please try again."
+    "download": "Download narration pack",
+    "downloading": "Downloading narration pack...",
+    "success": "Downloaded text + audio for {{count}} places ({{lang}}).",
+    "error": "Could not download the narration pack. Please try again."
   },
   "geofence": {
     "watching": "Watching your location for nearby audio suggestions...",
+    "locating": "Getting GPS fix...",
+    "watchingNoNearby": "GPS ready, but nearest place could not be loaded.",
+    "nearest": "Nearest: {{name}} ({{distance}}) — enter within {{radius}} m to auto-play.",
+    "inRange": "Inside {{name}} ({{distance}}) — suggesting narration...",
+    "cooldown": "Recently suggested {{name}} — wait for cooldown before replay.",
+    "error": "Could not read location. Check GPS permission and try again.",
     "disabled": "Location is off. Tap to enable automatic suggestions.",
-    "enable": "Enable location suggestions",
-    "disable": "Disable location suggestions",
+    "enable": "Enable location",
+    "disable": "Disable location",
     "unsupported": "This device does not support geolocation.",
     "permissionDenied": "Location access was not granted.",
-    "newNarration": "Nearby place detected: {{name}}",
-    "simulate": "Simulate at Independence Palace",
-    "simulateHint": "Fake GPS at Independence Palace to try narration without real GPS"
+    "newNarration": "Nearby place detected: {{name}}"
   },
   "map": {
     "loading": "Loading map...",
-    "locate": "My location"
+    "mode": "Map",
+    "cloud": "Cloud",
+    "offline": "Offline",
+    "hybrid": "Hybrid",
+    "cloudHint": "OSM basemap, needs Internet.",
+    "offlineHint": "Vector tiles from local hcm.pmtiles.",
+    "hybridHint": "OSM while online; PMTiles when the network drops.",
+    "offlinePackMissing": "Missing hcm.pmtiles — showing OSM for now. Place the pack under wwwroot/static/maps/packs/current/ (see docs/maps.md)."
+  },
+  "network": {
+    "offline": "No Internet — Hybrid is using the offline map.",
+    "online": "You're back online.",
+    "dismiss": "Dismiss"
   }
 }

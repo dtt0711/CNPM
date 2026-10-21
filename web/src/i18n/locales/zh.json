@@ -5,7 +5,32 @@
   },
   "nav": {
     "map": "地图",
-    "places": "景点"
+    "places": "景点",
+    "saved": "收藏"
+  },
+  "account": {
+    "signIn": "登录",
+    "signOut": "退出登录",
+    "admin": "管理后台"
+  },
+  "saved": {
+    "title": "已保存",
+    "login": "登录后可收藏景点并创建行程。",
+    "favorites": "收藏",
+    "tours": "行程",
+    "emptyFavorites": "还没有收藏。打开景点后点“收藏”。",
+    "emptyTours": "还没有行程。可用收藏景点排出参观顺序。",
+    "composerHint": "请至少选择两处。顺序会按距离优化。",
+    "pickedCount": "已选 {{count}} 处",
+    "needMoreFavorites": "请先收藏至少两处再创建行程。",
+    "stopCount": "{{count}} 处",
+    "cancelCreate": "取消",
+    "tourName": "行程名称，例如：滨城上午",
+    "untitledTour": "我的行程",
+    "createTour": "创建行程",
+    "deleteTour": "删除",
+    "needPlaces": "请至少选择两个收藏景点。",
+    "error": "无法保存，请登录后重试。"
   },
   "language": {
     "label": "语言",
@@ -21,10 +46,12 @@
     "empty": "暂无景点。",
     "error": "加载失败，请重试。",
     "retry": "重试",
-    "distance": "{{distance}} 米",
-    "category": "类别",
-    "district": "区/县",
-    "rating": "{{rating}} / 5（{{count}} 条评价）",
+    "distanceHint": "距当前 GPS 位置的距离",
+    "sortedByDistance": "按最近距离排序",
+    "ward": "坊",
+    "rating": "{{rating}} ({{count}})",
+    "reviewCount": "{{count}} 条评价",
+    "ratingWithLabel": "{{rating}}（{{count}} 条评价）",
     "viewDetail": "查看详情",
     "playNarration": "播放语音介绍"
   },
@@ -33,11 +60,15 @@
     "openingHours": "开放时间",
     "ticketPrice": "门票价格",
     "address": "地址",
-    "noDescription": "暂无该语言的介绍内容。"
+    "noDescription": "暂无该语言的介绍内容。",
+    "playHint": "点击下方“播放语音介绍”按钮收听导览。",
+    "translating": "正在翻译为所选语言…",
+    "fallbackLang": "正在显示备用语言。请稍后再试播放。",
+    "favorite": "收藏",
+    "unfavorite": "已收藏"
   },
   "audio": {
     "play": "播放",
-    "pause": "暂停",
     "stop": "停止",
     "status": {
       "idle": "就绪",
@@ -51,22 +82,40 @@
     }
   },
   "offline": {
-    "download": "下载离线包",
-    "downloading": "正在下载离线包...",
-    "success": "已下载 {{count}} 个景点的离线包（{{lang}}）。",
-    "error": "无法下载离线包，请重试。"
+    "download": "下载讲解内容",
+    "downloading": "正在下载讲解内容...",
+    "success": "已保存 {{count}} 个景点的文字和音频（{{lang}}）。",
+    "error": "下载失败，请重试。"
   },
   "geofence": {
     "watching": "正在监测您的位置以推荐附近的语音介绍...",
+    "locating": "正在获取 GPS 定位...",
+    "watchingNoNearby": "已获取定位，但 3 公里内没有景点。",
+    "nearest": "最近：{{name}}（{{distance}}）— 进入 {{radius}} m 内才会自动播放。",
+    "inRange": "已在 {{name}} 范围内（{{distance}}）— 正在准备导览...",
+    "cooldown": "刚刚推荐过 {{name}}，冷却结束后才会再次播放。",
+    "error": "无法读取位置。请检查 GPS 权限后重试。",
     "disabled": "定位未开启，点击以启用自动提醒。",
-    "enable": "启用位置提醒",
-    "disable": "关闭位置提醒",
+    "enable": "开启定位",
+    "disable": "关闭定位",
     "unsupported": "此设备不支持定位功能。",
     "permissionDenied": "尚未授予位置访问权限。",
     "newNarration": "检测到附近景点：{{name}}"
   },
   "map": {
     "loading": "正在加载地图...",
-    "locate": "我的位置"
+    "mode": "地图",
+    "cloud": "Cloud",
+    "offline": "Offline",
+    "hybrid": "Hybrid",
+    "cloudHint": "OSM（需要网络）",
+    "offlineHint": "本地 hcm.pmtiles",
+    "hybridHint": "在线用 OSM，断网切 PMTiles",
+    "offlinePackMissing": "缺少 hcm.pmtiles — 暂用 OSM。请放到 packs/current/（见 docs/maps.md）。"
+  },
+  "network": {
+    "offline": "无网络 — 正在切换到离线地图。",
+    "online": "网络已恢复。",
+    "dismiss": "关闭"
   }
 }

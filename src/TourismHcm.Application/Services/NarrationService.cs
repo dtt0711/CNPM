@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using TourismHcm.Application.Abstractions.Providers;
 using TourismHcm.Application.Abstractions.Repositories;
 using TourismHcm.Application.Abstractions.Services;
@@ -15,17 +16,23 @@ public sealed class NarrationService : INarrationService
     private readonly ITranslationRepository _translationRepository;
     private readonly IAudioAssetRepository _audioAssetRepository;
     private readonly IAudioStorage _audioStorage;
+    private readonly IAudioService _audioService;
+    private readonly ILogger<NarrationService> _logger;
 
     public NarrationService(
         IPlaceRepository placeRepository,
         ITranslationRepository translationRepository,
         IAudioAssetRepository audioAssetRepository,
-        IAudioStorage audioStorage)
+        IAudioStorage audioStorage,
+        IAudioService audioService,
+        ILogger<NarrationService> logger)
     {
         _placeRepository = placeRepository;
         _translationRepository = translationRepository;
         _audioAssetRepository = audioAssetRepository;
         _audioStorage = audioStorage;
+        _audioService = audioService;
+        _logger = logger;
     }
 
     public async Task<NarrationResponse> GetNarrationAsync(Guid placeId, string requestedLang, CancellationToken ct = default)
@@ -34,6 +41,19 @@ public sealed class NarrationService : INarrationService
             ?? throw new NotFoundException("Place", placeId);
 
         var normalizedRequested = AppLanguages.Normalize(requestedLang);
+
+        // Ensure machine translation exists for the requested language (best-effort).
+        if (!string.Equals(normalizedRequested, AppLanguages.Vietnamese, StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                await _audioService.EnsureTranslationAsync(placeId, normalizedRequested, ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(ex, "Auto-translate failed for place {PlaceId} lang {Lang}", placeId, normalizedRequested);
+            }
+        }
 
         var fallbackChain = new[] { normalizedRequested, AppLanguages.English, AppLanguages.Vietnamese }
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -53,10 +73,18 @@ public sealed class NarrationService : INarrationService
             }
         }
 
-        // Vietnamese description is always present per place invariants; this should not happen,
-        // but guard defensively instead of throwing a confusing null-reference later.
         actualLang ??= AppLanguages.Vietnamese;
         text ??= place.DescriptionVi;
+
+        // Kick off TTS generation when audio is missing for the language we will speak.
+        try
+        {
+            await _audioService.RequestAudioAsync(placeId, actualLang, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Auto-request audio failed for place {PlaceId} lang {Lang}", placeId, actualLang);
+        }
 
         var audioInfo = await BuildAudioInfoAsync(placeId, actualLang, ct);
 
@@ -86,13 +114,14 @@ public sealed class NarrationService : INarrationService
     private async Task<AudioInfoDto> BuildAudioInfoAsync(Guid placeId, string lang, CancellationToken ct)
     {
         var asset = await _audioAssetRepository.GetAsync(placeId, lang, ct);
+        var task = await _audioService.GetTaskStatusAsync(placeId, lang, ct);
 
         if (asset is null)
         {
             return new AudioInfoDto
             {
                 Available = false,
-                Status = "NotRequested"
+                Status = task?.Status ?? "Pending"
             };
         }
 
@@ -101,7 +130,7 @@ public sealed class NarrationService : INarrationService
             return new AudioInfoDto
             {
                 Available = false,
-                Status = asset.Status.ToString(),
+                Status = task?.Status ?? asset.Status.ToString(),
                 DurationSec = asset.DurationSec
             };
         }

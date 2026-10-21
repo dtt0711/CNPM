@@ -10,7 +10,12 @@ public interface IJwtTokenService
     /// Builds a full <see cref="AuthResponse"/> containing a freshly minted JWT access token
     /// plus the already-generated raw refresh token for the given user and roles.
     /// </summary>
-    AuthResponse CreateTokens(User user, IEnumerable<string> roles, string refreshToken, DateTimeOffset refreshTokenExpiresAt);
+    AuthResponse CreateTokens(
+        User user,
+        IEnumerable<string> roles,
+        IEnumerable<string> permissions,
+        string refreshToken,
+        DateTimeOffset refreshTokenExpiresAt);
 
     /// <summary>
     /// Generates a new cryptographically random raw refresh token value.
@@ -22,5 +27,5 @@ public interface IJwtTokenService
     /// </summary>
     ClaimsPrincipal? ValidateAccessToken(string accessToken);
 
-    IEnumerable<Claim> BuildUserClaims(User user, IEnumerable<string> roles);
+    IEnumerable<Claim> BuildUserClaims(User user, IEnumerable<string> roles, IEnumerable<string> permissions);
 }

@@ -22,21 +22,29 @@ public sealed class AudioServiceTests
     private ITextToSpeechProvider _ttsProvider = FakeProviders.CreateTextToSpeechProvider(isConfigured: true);
     private readonly IAudioStorage _audioStorage = FakeProviders.CreateAudioStorage();
     private readonly IAudioTaskQueue _audioTaskQueue = FakeProviders.CreateAudioTaskQueue();
+    private readonly IAudioTaskRuntime _audioTaskRuntime = Substitute.For<IAudioTaskRuntime>();
     private readonly IUnitOfWork _unitOfWork = FakeProviders.CreateUnitOfWork();
     private readonly AudioOptions _options = new();
 
-    private AudioService CreateSut() => new(
-        _placeRepository,
-        _translationRepository,
-        _audioAssetRepository,
-        _audioTaskRepository,
-        _translationProvider,
-        _ttsProvider,
-        _audioStorage,
-        _audioTaskQueue,
-        _unitOfWork,
-        OptionsFactory.Create(_options),
-        NullLogger<AudioService>.Instance);
+    private AudioService CreateSut()
+    {
+        _audioTaskRuntime.Register(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(call => call.ArgAt<CancellationToken>(1));
+
+        return new(
+            _placeRepository,
+            _translationRepository,
+            _audioAssetRepository,
+            _audioTaskRepository,
+            _translationProvider,
+            _ttsProvider,
+            _audioStorage,
+            _audioTaskQueue,
+            _audioTaskRuntime,
+            _unitOfWork,
+            OptionsFactory.Create(_options),
+            NullLogger<AudioService>.Instance);
+    }
 
     // ---------- EnsureTranslationAsync ----------
 

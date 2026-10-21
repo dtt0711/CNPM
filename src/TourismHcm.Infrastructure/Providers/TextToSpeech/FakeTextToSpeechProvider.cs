@@ -3,9 +3,7 @@ using TourismHcm.Application.Abstractions.Providers;
 namespace TourismHcm.Infrastructure.Providers.TextToSpeech;
 
 /// <summary>
-/// Offline text-to-speech stub used only in Development/Testing environments when no real TTS
-/// provider key is configured. Produces a small but structurally valid (silent) MP3 payload so
-/// downstream code that stores/streams audio can be exercised without any external dependency.
+/// Silent MP3 stub registered only in the Testing environment (unit/integration hosts).
 /// </summary>
 public sealed class FakeTextToSpeechProvider : ITextToSpeechProvider
 {

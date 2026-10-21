@@ -83,6 +83,26 @@ describe("GeofenceEngine", () => {
     engine.dispose();
   });
 
+  it("forceCheck plays immediately even when server cooldown sets triggered=false", async () => {
+    const onNarration = vi.fn<(event: NarrationEvent) => void>();
+    const fetchTrigger = vi.fn().mockResolvedValue(
+      narrationResult("place-A", { triggered: false }),
+    );
+    const engine = new GeofenceEngine({
+      clientId: "client-1",
+      fetchTrigger,
+      onNarration,
+      cooldownMs: 5 * 60 * 1000,
+    });
+
+    await engine.forceCheck({ lat: 10.7769, lng: 106.6959 });
+    expect(fetchTrigger).toHaveBeenCalledTimes(1);
+    expect(onNarration).toHaveBeenCalledTimes(1);
+    expect(onNarration.mock.calls[0][0].placeId).toBe("place-A");
+
+    engine.dispose();
+  });
+
   it("suppresses repeat narration playback for the same place within the 5 min client cooldown", async () => {
     const onNarration = vi.fn<(event: NarrationEvent) => void>();
     const fetchTrigger = vi.fn().mockResolvedValue(narrationResult("place-A"));

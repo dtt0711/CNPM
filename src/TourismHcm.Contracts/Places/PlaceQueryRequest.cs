@@ -6,7 +6,7 @@ public sealed class PlaceQueryRequest
     public int PageSize { get; init; } = 20;
     public string? Search { get; init; }
     public string? Category { get; init; }
-    public string? District { get; init; }
+    public string? Ward { get; init; }
     public string? Status { get; init; }
     public string? SortBy { get; init; }
     public bool Descending { get; init; }

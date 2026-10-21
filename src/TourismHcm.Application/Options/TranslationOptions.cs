@@ -5,9 +5,9 @@ public sealed class TranslationOptions
     public const string SectionName = "Translation";
 
     /// <summary>
-    /// "Google", "Azure" or "Fake".
+    /// "Free" (sidecar deep-translator) or "Google" (Cloud API). "Fake" is ignored outside Testing.
     /// </summary>
-    public string Provider { get; set; } = "Fake";
+    public string Provider { get; set; } = "Free";
 
     public string ApiKey { get; set; } = string.Empty;
 

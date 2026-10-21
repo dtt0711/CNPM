@@ -1,5 +1,9 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { PlaceDto } from "../api/types";
+import { formatDistanceKm, haversineMeters } from "../geo/distance";
+import { formatWard } from "../places/ward";
+import { GoogleStyleRating } from "./GoogleStyleRating";
 
 export interface PlaceListProps {
   places: PlaceDto[];
@@ -8,6 +12,8 @@ export interface PlaceListProps {
   selectedPlaceId: string | null;
   onSelectPlace: (placeId: string) => void;
   onRetry: () => void;
+  /** Reference point for distance sort (GPS or demo). */
+  origin: { lat: number; lng: number } | null;
 }
 
 export function PlaceList({
@@ -17,8 +23,21 @@ export function PlaceList({
   selectedPlaceId,
   onSelectPlace,
   onRetry,
+  origin,
 }: PlaceListProps) {
   const { t } = useTranslation();
+
+  const ranked = useMemo(() => {
+    if (!origin) {
+      return places.map((place) => ({ place, distanceMeters: null as number | null }));
+    }
+    return places
+      .map((place) => ({
+        place,
+        distanceMeters: haversineMeters(origin.lat, origin.lng, place.latitude, place.longitude),
+      }))
+      .sort((a, b) => (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0));
+  }, [places, origin]);
 
   if (loading) {
     return <div className="panel panel--muted">{t("places.loading")}</div>;
@@ -35,13 +54,13 @@ export function PlaceList({
     );
   }
 
-  if (places.length === 0) {
+  if (ranked.length === 0) {
     return <div className="panel panel--muted">{t("places.empty")}</div>;
   }
 
   return (
     <ul className="place-list">
-      {places.map((place) => (
+      {ranked.map(({ place, distanceMeters }) => (
         <li key={place.id}>
           <button
             type="button"
@@ -56,13 +75,23 @@ export function PlaceList({
               <div className="place-card__image place-card__image--placeholder" aria-hidden="true" />
             )}
             <div className="place-card__body">
-              <h3 className="place-card__title">{place.name}</h3>
+              <div className="place-card__heading">
+                <h3 className="place-card__title">{place.name}</h3>
+                {distanceMeters != null && (
+                  <span className="place-card__distance" title={t("places.distanceHint")}>
+                    {formatDistanceKm(distanceMeters)}
+                  </span>
+                )}
+              </div>
               <p className="place-card__meta">
-                {place.category} · {place.district}
+                {place.category} · {formatWard(place.ward, t("places.ward"))}
               </p>
-              <p className="place-card__rating">
-                {t("places.rating", { rating: place.averageRating.toFixed(1), count: place.reviewCount })}
-              </p>
+              <GoogleStyleRating
+                className="place-card__rating"
+                rating={place.averageRating}
+                reviewCount={place.reviewCount}
+              />
+              <span className="place-card__cta">{t("places.viewDetail")}</span>
             </div>
           </button>
         </li>

@@ -1,8 +1,11 @@
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using TourismHcm.Application.Abstractions.Providers;
 using TourismHcm.Application.Abstractions.Repositories;
+using TourismHcm.Application.Abstractions.Services;
 using TourismHcm.Application.Services;
+using TourismHcm.Contracts.Audio;
 using TourismHcm.Domain.Enums;
 using TourismHcm.Domain.Exceptions;
 using TourismHcm.UnitTests.TestDoubles;
@@ -15,9 +18,34 @@ public sealed class NarrationServiceTests
     private readonly ITranslationRepository _translationRepository = Substitute.For<ITranslationRepository>();
     private readonly IAudioAssetRepository _audioAssetRepository = Substitute.For<IAudioAssetRepository>();
     private readonly IAudioStorage _audioStorage = Substitute.For<IAudioStorage>();
+    private readonly IAudioService _audioService = Substitute.For<IAudioService>();
+    private readonly ILogger<NarrationService> _logger = Substitute.For<ILogger<NarrationService>>();
 
-    private NarrationService CreateSut() =>
-        new(_placeRepository, _translationRepository, _audioAssetRepository, _audioStorage);
+    private NarrationService CreateSut()
+    {
+        _audioService.EnsureTranslationAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+        _audioService.RequestAudioAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new AudioTaskDto
+            {
+                Id = Guid.NewGuid(),
+                PlaceId = Guid.Empty,
+                Lang = "en",
+                Status = "Pending",
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow,
+            });
+        _audioService.GetTaskStatusAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((AudioTaskDto?)null);
+
+        return new(
+            _placeRepository,
+            _translationRepository,
+            _audioAssetRepository,
+            _audioStorage,
+            _audioService,
+            _logger);
+    }
 
     [Fact]
     public async Task GetNarrationAsync_WhenPlaceDoesNotExist_ThrowsNotFound()
@@ -156,7 +184,7 @@ public sealed class NarrationServiceTests
         var result = await sut.GetNarrationAsync(place.Id, "vi");
 
         result.Audio.Available.Should().BeFalse();
-        result.Audio.Status.Should().Be("NotRequested");
+        result.Audio.Status.Should().Be("Pending");
     }
 
     [Fact]

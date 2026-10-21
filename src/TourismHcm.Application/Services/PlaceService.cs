@@ -57,7 +57,7 @@ public sealed class PlaceService : IPlaceService
         var (items, totalCount) = await _placeRepository.SearchAsync(
             query.Search,
             category,
-            query.District,
+            query.Ward,
             status,
             query.SortBy,
             query.Descending,
@@ -81,7 +81,7 @@ public sealed class PlaceService : IPlaceService
             DescriptionVi = request.DescriptionVi.Trim(),
             ContentHash = ContentHash.Compute(request.DescriptionVi.Trim()),
             Category = category,
-            District = request.District.Trim(),
+            District = request.Ward.Trim(),
             Address = request.Address.Trim(),
             Latitude = request.Latitude,
             Longitude = request.Longitude,
@@ -130,9 +130,9 @@ public sealed class PlaceService : IPlaceService
             place.Category = ParseCategory(request.Category);
         }
 
-        if (request.District is not null)
+        if (request.Ward is not null)
         {
-            place.District = request.District.Trim();
+            place.District = request.Ward.Trim();
         }
 
         if (request.Address is not null)
@@ -204,14 +204,22 @@ public sealed class PlaceService : IPlaceService
     public async Task<IReadOnlyList<NearbyPlaceDto>> GetNearbyAsync(
         double latitude, double longitude, double radiusMeters, int? limit, CancellationToken ct = default)
     {
-        var (minLat, maxLat, minLng, maxLng) = GeoHelper.BoundingBox(latitude, longitude, radiusMeters);
-
-        var candidates = await _placeRepository.GetInBoundingBoxAsync(
-            minLat, maxLat, minLng, maxLng, PlaceStatus.Published, ct);
+        // radiusMeters <= 0 → nearest among all published places (no distance cap).
+        IReadOnlyList<Place> candidates;
+        if (radiusMeters <= 0)
+        {
+            candidates = await _placeRepository.GetAllPublishedAsync(ct);
+        }
+        else
+        {
+            var (minLat, maxLat, minLng, maxLng) = GeoHelper.BoundingBox(latitude, longitude, radiusMeters);
+            candidates = await _placeRepository.GetInBoundingBoxAsync(
+                minLat, maxLat, minLng, maxLng, PlaceStatus.Published, ct);
+        }
 
         var withDistance = candidates
             .Select(place => (Place: place, Distance: GeoHelper.HaversineMeters(latitude, longitude, place.Latitude, place.Longitude)))
-            .Where(x => x.Distance <= radiusMeters)
+            .Where(x => radiusMeters <= 0 || x.Distance <= radiusMeters)
             .OrderBy(x => x.Distance)
             .ToList();
 

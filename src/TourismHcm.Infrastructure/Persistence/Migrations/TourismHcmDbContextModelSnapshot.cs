@@ -161,6 +161,166 @@ namespace TourismHcm.Infrastructure.Persistence.Migrations
                     b.ToTable("AuditLogs", (string)null);
                 });
 
+            modelBuilder.Entity("TourismHcm.Domain.Entities.AiUsageLimit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Count")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("DateUtc")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "DateUtc")
+                        .IsUnique();
+
+                    b.ToTable("AiUsageLimits", (string)null);
+                });
+
+            modelBuilder.Entity("TourismHcm.Domain.Entities.AnalyticsDailyMetric", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("Count")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("DateUtc")
+                        .HasColumnType("date");
+
+                    b.Property<string>("MetricKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DateUtc", "MetricKey")
+                        .IsUnique();
+
+                    b.ToTable("AnalyticsDailyMetrics", (string)null);
+                });
+
+            modelBuilder.Entity("TourismHcm.Domain.Entities.AnalyticsDevice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("ConsentAnalytics")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("DeviceKeyHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset>("FirstSeenAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceKeyHash")
+                        .IsUnique();
+
+                    b.ToTable("AnalyticsDevices", (string)null);
+                });
+
+            modelBuilder.Entity("TourismHcm.Domain.Entities.AnalyticsEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("ConsentAnalytics")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("EventName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("PayloadJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OccurredAt");
+
+                    b.HasIndex("SessionId");
+
+                    b.ToTable("AnalyticsEvents", (string)null);
+                });
+
+            modelBuilder.Entity("TourismHcm.Domain.Entities.AnalyticsHourlyMetric", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("Count")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("HourUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("MetricKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HourUtc", "MetricKey")
+                        .IsUnique();
+
+                    b.ToTable("AnalyticsHourlyMetrics", (string)null);
+                });
+
+            modelBuilder.Entity("TourismHcm.Domain.Entities.AnalyticsSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("ConsentAnalytics")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("EndedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceId");
+
+                    b.HasIndex("StartedAt");
+
+                    b.ToTable("AnalyticsSessions", (string)null);
+                });
+
             modelBuilder.Entity("TourismHcm.Domain.Entities.Favorite", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -233,6 +393,9 @@ namespace TourismHcm.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<Guid?>("OwnerUserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("OpeningHours")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -253,8 +416,8 @@ namespace TourismHcm.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("TicketPrice")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<int>("TriggerRadiusMeters")
                         .HasColumnType("int");
@@ -265,6 +428,8 @@ namespace TourismHcm.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("District");
+
+                    b.HasIndex("OwnerUserId");
 
                     b.HasIndex("Status");
 
@@ -311,6 +476,132 @@ namespace TourismHcm.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("PlaceTranslations", (string)null);
+                });
+
+            modelBuilder.Entity("TourismHcm.Domain.Entities.OwnerNotification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid?>("RelatedSubmissionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "IsRead");
+
+                    b.ToTable("OwnerNotifications", (string)null);
+                });
+
+            modelBuilder.Entity("TourismHcm.Domain.Entities.OwnerRegistration", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AdminNote")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NationalIdEncrypted")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTimeOffset?>("ReviewedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("OwnerRegistrations", (string)null);
+                });
+
+            modelBuilder.Entity("TourismHcm.Domain.Entities.PlaceSubmission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AdminNote")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("PlaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("ReviewedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlaceId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PlaceSubmissions", (string)null);
                 });
 
             modelBuilder.Entity("TourismHcm.Domain.Entities.RefreshToken", b =>
@@ -385,6 +676,71 @@ namespace TourismHcm.Infrastructure.Persistence.Migrations
                     b.ToTable("Reviews", (string)null);
                 });
 
+            modelBuilder.Entity("TourismHcm.Domain.Entities.RuntimeLocationHourly", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BucketKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<long>("Count")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("HourUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HourUtc", "BucketKey")
+                        .IsUnique();
+
+                    b.ToTable("RuntimeLocationHourlies", (string)null);
+                });
+
+            modelBuilder.Entity("TourismHcm.Domain.Entities.UiTranslationBundle", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Locale")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Namespace")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SourceHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Namespace", "Locale", "SourceHash");
+
+                    b.ToTable("UiTranslationBundles", (string)null);
+                });
+
             modelBuilder.Entity("TourismHcm.Domain.Entities.Role", b =>
                 {
                     b.Property<Guid>("Id")
@@ -395,6 +751,15 @@ namespace TourismHcm.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("PermissionsJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValue("[]");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -477,15 +842,30 @@ namespace TourismHcm.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsPlaceOwnerVerified")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("NationalIdEncrypted")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid?>("OwnedPlaceId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<DateTimeOffset?>("PiiRedactedAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
                         .IsUnique();
+
+                    b.HasIndex("OwnedPlaceId");
 
                     b.ToTable("Users", (string)null);
                 });
@@ -527,6 +907,39 @@ namespace TourismHcm.Infrastructure.Persistence.Migrations
                     b.Navigation("Place");
                 });
 
+            modelBuilder.Entity("TourismHcm.Domain.Entities.AiUsageLimit", b =>
+                {
+                    b.HasOne("TourismHcm.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("TourismHcm.Domain.Entities.AnalyticsEvent", b =>
+                {
+                    b.HasOne("TourismHcm.Domain.Entities.AnalyticsSession", "Session")
+                        .WithMany("Events")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("TourismHcm.Domain.Entities.AnalyticsSession", b =>
+                {
+                    b.HasOne("TourismHcm.Domain.Entities.AnalyticsDevice", "Device")
+                        .WithMany("Sessions")
+                        .HasForeignKey("DeviceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Device");
+                });
+
             modelBuilder.Entity("TourismHcm.Domain.Entities.Favorite", b =>
                 {
                     b.HasOne("TourismHcm.Domain.Entities.Place", "Place")
@@ -555,6 +968,46 @@ namespace TourismHcm.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Place");
+                });
+
+            modelBuilder.Entity("TourismHcm.Domain.Entities.OwnerNotification", b =>
+                {
+                    b.HasOne("TourismHcm.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("TourismHcm.Domain.Entities.OwnerRegistration", b =>
+                {
+                    b.HasOne("TourismHcm.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("TourismHcm.Domain.Entities.PlaceSubmission", b =>
+                {
+                    b.HasOne("TourismHcm.Domain.Entities.Place", "Place")
+                        .WithMany()
+                        .HasForeignKey("PlaceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("TourismHcm.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Place");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("TourismHcm.Domain.Entities.RefreshToken", b =>
@@ -634,6 +1087,16 @@ namespace TourismHcm.Infrastructure.Persistence.Migrations
                     b.Navigation("Role");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("TourismHcm.Domain.Entities.AnalyticsDevice", b =>
+                {
+                    b.Navigation("Sessions");
+                });
+
+            modelBuilder.Entity("TourismHcm.Domain.Entities.AnalyticsSession", b =>
+                {
+                    b.Navigation("Events");
                 });
 
             modelBuilder.Entity("TourismHcm.Domain.Entities.Place", b =>

@@ -5,7 +5,7 @@ public sealed class UpdatePlaceRequest
     public string? Name { get; init; }
     public string? DescriptionVi { get; init; }
     public string? Category { get; init; }
-    public string? District { get; init; }
+    public string? Ward { get; init; }
     public string? Address { get; init; }
     public double? Latitude { get; init; }
     public double? Longitude { get; init; }

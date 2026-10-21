@@ -5,7 +5,32 @@
   },
   "nav": {
     "map": "지도",
-    "places": "관광지"
+    "places": "관광지",
+    "saved": "저장"
+  },
+  "account": {
+    "signIn": "로그인",
+    "signOut": "로그아웃",
+    "admin": "관리자"
+  },
+  "saved": {
+    "title": "저장",
+    "login": "즐겨찾기와 일정을 쓰려면 로그인하세요.",
+    "favorites": "즐겨찾기",
+    "tours": "일정",
+    "emptyFavorites": "즐겨찾기가 없습니다.",
+    "emptyTours": "일정이 없습니다. 즐겨찾기로 방문 순서를 만들 수 있습니다.",
+    "composerHint": "2곳 이상 선택하세요. 거리 기준으로 순서를 맞춥니다.",
+    "pickedCount": "{{count}}곳 선택됨",
+    "needMoreFavorites": "일정을 만들려면 즐겨찾기를 2곳 이상 저장하세요.",
+    "stopCount": "{{count}}곳",
+    "cancelCreate": "취소",
+    "tourName": "일정 이름, 예: 벤타인 오전",
+    "untitledTour": "내 일정",
+    "createTour": "일정 만들기",
+    "deleteTour": "삭제",
+    "needPlaces": "즐겨찾기를 2곳 이상 선택하세요.",
+    "error": "저장하지 못했습니다. 로그인 후 다시 시도하세요."
   },
   "language": {
     "label": "언어",
@@ -21,10 +46,12 @@
     "empty": "표시할 관광지가 없습니다.",
     "error": "목록을 불러오지 못했습니다. 다시 시도해주세요.",
     "retry": "다시 시도",
-    "distance": "{{distance}} m",
-    "category": "분류",
-    "district": "구/군",
-    "rating": "{{rating}} / 5 ({{count}}개의 리뷰)",
+    "distanceHint": "현재 GPS 위치로부터의 거리",
+    "sortedByDistance": "가까운 거리순으로 정렬",
+    "ward": "방",
+    "rating": "{{rating}} ({{count}})",
+    "reviewCount": "리뷰 {{count}}개",
+    "ratingWithLabel": "{{rating}} (리뷰 {{count}}개)",
     "viewDetail": "자세히 보기",
     "playNarration": "안내 음성 재생"
   },
@@ -33,11 +60,15 @@
     "openingHours": "운영 시간",
     "ticketPrice": "입장료",
     "address": "주소",
-    "noDescription": "이 언어로 작성된 설명이 아직 없습니다."
+    "noDescription": "이 언어로 작성된 설명이 아직 없습니다.",
+    "playHint": "아래 바의 “안내 음성 재생” 버튼으로 가이드를 들으세요.",
+    "translating": "선택한 언어로 번역 중…",
+    "fallbackLang": "대체 언어를 표시합니다. 몇 초 후 다시 재생해 보세요.",
+    "favorite": "저장",
+    "unfavorite": "저장됨"
   },
   "audio": {
     "play": "재생",
-    "pause": "일시정지",
     "stop": "정지",
     "status": {
       "idle": "준비됨",
@@ -51,22 +82,40 @@
     }
   },
   "offline": {
-    "download": "오프라인 팩 다운로드",
-    "downloading": "오프라인 팩 다운로드 중...",
-    "success": "{{count}}개 장소의 오프라인 팩을 다운로드했습니다 ({{lang}}).",
-    "error": "오프라인 팩을 다운로드하지 못했습니다. 다시 시도해주세요."
+    "download": "안내 콘텐츠 다운로드",
+    "downloading": "안내 콘텐츠 다운로드 중...",
+    "success": "{{count}}곳의 텍스트와 오디오를 저장했습니다 ({{lang}}).",
+    "error": "다운로드하지 못했습니다."
   },
   "geofence": {
     "watching": "주변 오디오 안내를 위해 위치를 추적하고 있습니다...",
+    "locating": "GPS 위치를 가져오는 중...",
+    "watchingNoNearby": "위치는 확인됐지만 3km 안에 명소가 없습니다.",
+    "nearest": "가장 가까움: {{name}} ({{distance}}) — {{radius}} m 안에 들어오면 자동 재생됩니다.",
+    "inRange": "{{name}} 범위 안 ({{distance}}) — 안내를 준비 중...",
+    "cooldown": "최근에 {{name}}을(를) 안내했습니다. 쿨다운 후 다시 재생됩니다.",
+    "error": "위치를 읽을 수 없습니다. GPS 권한을 확인한 뒤 다시 시도하세요.",
     "disabled": "위치 서비스가 꺼져 있습니다. 눌러서 자동 알림을 활성화하세요.",
-    "enable": "위치 기반 알림 활성화",
-    "disable": "위치 기반 알림 비활성화",
+    "enable": "위치 켜기",
+    "disable": "위치 끄기",
     "unsupported": "이 기기는 위치 서비스를 지원하지 않습니다.",
     "permissionDenied": "위치 접근 권한이 허용되지 않았습니다.",
     "newNarration": "근처 장소를 발견했습니다: {{name}}"
   },
   "map": {
     "loading": "지도를 불러오는 중...",
-    "locate": "현재 위치"
+    "mode": "지도",
+    "cloud": "Cloud",
+    "offline": "Offline",
+    "hybrid": "Hybrid",
+    "cloudHint": "OSM (인터넷 필요)",
+    "offlineHint": "로컬 hcm.pmtiles",
+    "hybridHint": "온라인은 OSM, 오프라인은 PMTiles",
+    "offlinePackMissing": "hcm.pmtiles 없음 — 임시로 OSM을 표시합니다. packs/current/에 넣으세요 (docs/maps.md)."
+  },
+  "network": {
+    "offline": "인터넷 없음 — 오프라인 지도로 전환합니다.",
+    "online": "다시 온라인입니다.",
+    "dismiss": "닫기"
   }
 }

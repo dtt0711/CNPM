@@ -48,6 +48,7 @@ google-credentials.json
 data/
 audio-storage/
 *.mp3
+*.pmtiles
 !web/public/**
 
 ## OS

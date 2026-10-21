@@ -4,8 +4,7 @@ using TourismHcm.Domain.Constants;
 namespace TourismHcm.Infrastructure.Providers.Translation;
 
 /// <summary>
-/// Deterministic, offline translation stub used only in Development/Testing environments when
-/// no real translation provider API key is configured. Never used in Production.
+/// Deterministic stub registered only in the Testing environment (unit/integration hosts).
 /// </summary>
 public sealed class FakeTranslationProvider : ITranslationProvider
 {

@@ -16,4 +16,14 @@ public interface IAdminService
 
     Task<PagedResult<AuditLogDto>> GetAuditLogsAsync(
         Guid? userId, string? entityType, int page, int pageSize, CancellationToken ct = default);
+
+    Task<PagedResult<AdminUserDto>> ListUsersAsync(int page, int pageSize, CancellationToken ct = default);
+
+    Task SetUserActiveAsync(Guid adminUserId, Guid userId, bool isActive, CancellationToken ct = default);
+
+    Task AssignUserRolesAsync(Guid adminUserId, Guid userId, AssignUserRolesRequest request, CancellationToken ct = default);
+
+    Task<IReadOnlyList<AdminRoleDto>> ListRolesAsync(CancellationToken ct = default);
+
+    Task UpdateRolePermissionsAsync(Guid adminUserId, Guid roleId, UpdateRolePermissionsRequest request, CancellationToken ct = default);
 }

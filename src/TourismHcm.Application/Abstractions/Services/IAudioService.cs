@@ -40,4 +40,16 @@ public interface IAudioService
     /// Re-enqueues any tasks left Pending/Running (e.g. after a process restart).
     /// </summary>
     Task RecoverPendingTasksAsync(CancellationToken ct = default);
+
+    Task<AudioPackManifestDto> GetPackManifestAsync(string lang, CancellationToken ct = default);
+
+    Task<AudioTaskDto> CancelTaskAsync(Guid taskId, CancellationToken ct = default);
+
+    Task<AudioTaskDto> PauseTaskAsync(Guid taskId, CancellationToken ct = default);
+
+    Task<AudioTaskDto> ResumeTaskAsync(Guid taskId, CancellationToken ct = default);
+
+    Task<IReadOnlyList<AudioTaskDto>> ListActiveTasksAsync(CancellationToken ct = default);
+
+    Task<IReadOnlyList<AudioTaskDto>> ListRecentTasksAsync(int take = 50, CancellationToken ct = default);
 }

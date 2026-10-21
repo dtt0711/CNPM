@@ -49,5 +49,11 @@ public static class DependencyInjection
         services.AddScoped<ITourService, TourService>();
         services.AddScoped<IAdminService, AdminService>();
         services.AddScoped<ILanguageService, LanguageService>();
+        services.AddScoped<IPermissionService, PermissionService>();
+        services.AddScoped<IAiAdvisorService, AiAdvisorService>();
+        services.AddScoped<IMapPackService, MapPackService>();
+        services.AddScoped<IAnalyticsService, AnalyticsService>();
+        services.AddScoped<IUiBundleService, UiBundleService>();
+        services.AddScoped<ILocalizationService, LocalizationService>();
     }
 }

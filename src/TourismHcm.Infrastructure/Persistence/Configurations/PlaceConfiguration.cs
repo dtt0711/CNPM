@@ -18,7 +18,7 @@ public sealed class PlaceConfiguration : IEntityTypeConfiguration<Place>
         builder.Property(p => p.District).HasMaxLength(100).IsRequired();
         builder.Property(p => p.Address).HasMaxLength(300).IsRequired();
         builder.Property(p => p.OpeningHours).HasMaxLength(500);
-        builder.Property(p => p.TicketPrice).HasMaxLength(200);
+        builder.Property(p => p.TicketPrice).HasMaxLength(1000);
         builder.Property(p => p.ImageUrl).HasMaxLength(2000);
         builder.Property(p => p.Tags).HasMaxLength(500);
         builder.Property(p => p.Category).HasConversion<string>().HasMaxLength(30);
@@ -27,6 +27,7 @@ public sealed class PlaceConfiguration : IEntityTypeConfiguration<Place>
 
         builder.HasIndex(p => p.Status);
         builder.HasIndex(p => p.District);
+        builder.HasIndex(p => p.OwnerUserId);
         builder.HasIndex(p => new { p.Latitude, p.Longitude });
 
         builder.HasMany(p => p.Translations)
