@@ -68,6 +68,43 @@ public sealed class AnalyticsServiceTests
     }
 
     [Fact]
+    public async Task RecordPresenceAsync_EmptyDeviceId_Throws()
+    {
+        var sut = CreateSut();
+        var act = async () => await sut.RecordPresenceAsync("  ");
+
+        await act.Should().ThrowAsync<ValidationDomainException>();
+        await _uow.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RecordPresenceAsync_TouchesDevice()
+    {
+        var sut = CreateSut();
+        await sut.RecordPresenceAsync("phone-a");
+
+        await _platform.Received(1).TouchAnalyticsDeviceAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetAdminSummaryAsync_IncludesActiveDeviceCount()
+    {
+        _platform.GetHourlyMetricsSinceAsync(Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+        _platform.CountAnalyticsDevicesSeenSinceAsync(Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(4);
+
+        var sut = CreateSut();
+        var summary = await sut.GetAdminSummaryAsync();
+
+        summary.ActiveDevices.Should().Be(4);
+        await _platform.Received(1).CountAnalyticsDevicesSeenSinceAsync(
+            Arg.Is<DateTimeOffset>(t => t <= DateTimeOffset.UtcNow && t >= DateTimeOffset.UtcNow - TimeSpan.FromMinutes(4)),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task ExportCsvAsync_EscapesCommaInKey()
     {
         _platform.GetHourlyMetricsSinceAsync(Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())

@@ -9,6 +9,8 @@ namespace TourismHcm.Application.Services;
 
 public sealed class AnalyticsService : IAnalyticsService
 {
+    public static readonly TimeSpan ActiveDeviceWindow = TimeSpan.FromMinutes(3);
+
     private readonly IPlatformRepository _platformRepository;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -81,12 +83,30 @@ public sealed class AnalyticsService : IAnalyticsService
         await _unitOfWork.SaveChangesAsync(ct);
     }
 
+    public async Task RecordPresenceAsync(string deviceId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(deviceId))
+        {
+            throw new ValidationDomainException(new Dictionary<string, string[]>
+            {
+                [nameof(deviceId)] = ["Device id is required."]
+            });
+        }
+
+        var deviceHash = ContentHash.Compute(deviceId.Trim());
+        await _platformRepository.TouchAnalyticsDeviceAsync(deviceHash, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
+    }
+
     public async Task<AnalyticsAdminSummaryDto> GetAdminSummaryAsync(CancellationToken ct = default)
     {
         var since = DateTimeOffset.UtcNow.AddHours(-48);
         var metrics = await _platformRepository.GetHourlyMetricsSinceAsync(since, ct);
+        var activeSince = DateTimeOffset.UtcNow - ActiveDeviceWindow;
+        var activeDevices = await _platformRepository.CountAnalyticsDevicesSeenSinceAsync(activeSince, ct);
         return new AnalyticsAdminSummaryDto
         {
+            ActiveDevices = activeDevices,
             Hourly = metrics.Select(m => new AnalyticsHourlyMetricDto
             {
                 HourUtc = m.HourUtc,

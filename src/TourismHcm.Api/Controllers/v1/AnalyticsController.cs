@@ -26,6 +26,14 @@ public sealed class AnalyticsController : ControllerBase
         return Accepted();
     }
 
+    [HttpPost("presence")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Presence([FromBody] AnalyticsPresenceRequest request, CancellationToken ct)
+    {
+        await _analyticsService.RecordPresenceAsync(request.DeviceId, ct);
+        return NoContent();
+    }
+
     [HttpGet("admin/summary")]
     [Authorize(Policy = "RequireAdmin")]
     public async Task<ActionResult<AnalyticsAdminSummaryDto>> GetAdminSummary(CancellationToken ct)

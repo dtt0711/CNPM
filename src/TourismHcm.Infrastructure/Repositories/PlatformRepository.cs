@@ -129,6 +129,30 @@ public sealed class PlatformRepository : IPlatformRepository
         return device;
     }
 
+    public async Task TouchAnalyticsDeviceAsync(string deviceKeyHash, CancellationToken ct = default)
+    {
+        var existing = await _dbContext.AnalyticsDevices
+            .FirstOrDefaultAsync(d => d.DeviceKeyHash == deviceKeyHash, ct);
+
+        if (existing is not null)
+        {
+            existing.LastSeenAt = DateTimeOffset.UtcNow;
+            return;
+        }
+
+        await _dbContext.AnalyticsDevices.AddAsync(new AnalyticsDevice
+        {
+            Id = Guid.NewGuid(),
+            DeviceKeyHash = deviceKeyHash,
+            ConsentAnalytics = false,
+            FirstSeenAt = DateTimeOffset.UtcNow,
+            LastSeenAt = DateTimeOffset.UtcNow
+        }, ct);
+    }
+
+    public Task<int> CountAnalyticsDevicesSeenSinceAsync(DateTimeOffset since, CancellationToken ct = default) =>
+        _dbContext.AnalyticsDevices.CountAsync(d => d.LastSeenAt >= since, ct);
+
     public Task<AnalyticsSession?> GetAnalyticsSessionAsync(Guid sessionId, CancellationToken ct = default) =>
         _dbContext.AnalyticsSessions.FirstOrDefaultAsync(s => s.Id == sessionId, ct);
 

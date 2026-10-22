@@ -251,7 +251,12 @@ export interface AnalyticsHourlyMetricDto {
 }
 
 export interface AnalyticsAdminSummaryDto {
+  activeDevices: number;
   hourly: AnalyticsHourlyMetricDto[];
+}
+
+export interface AnalyticsPresenceRequest {
+  deviceId: string;
 }
 
 // --- AI ---

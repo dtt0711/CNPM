@@ -5,6 +5,7 @@ import type {
   AiUsageDto,
   AnalyticsAdminSummaryDto,
   AnalyticsCollectRequest,
+  AnalyticsPresenceRequest,
   AuditLogDto,
   AudioTaskDto,
   AuthResponse,
@@ -529,6 +530,14 @@ export const api = {
   collect(body: AnalyticsCollectRequest, signal?: AbortSignal) {
     return request<void>(
       "/analytics/collect",
+      { method: "POST", body: JSON.stringify(body) },
+      signal,
+    );
+  },
+
+  recordPresence(body: AnalyticsPresenceRequest, signal?: AbortSignal) {
+    return request<void>(
+      "/analytics/presence",
       { method: "POST", body: JSON.stringify(body) },
       signal,
     );

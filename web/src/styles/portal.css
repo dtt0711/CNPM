@@ -790,6 +790,73 @@
   line-height: 1.5;
 }
 
+.admin-dash__hero-aside {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-dash__live {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 12px;
+  background: var(--admin-surface-2);
+  border: 1px solid var(--admin-line);
+  color: inherit;
+  text-decoration: none;
+  min-width: 11rem;
+}
+
+.admin-dash__live:hover {
+  border-color: var(--admin-teal);
+}
+
+.admin-dash__live-count {
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.admin-dash__live-label {
+  font-size: 0.78rem;
+  color: var(--admin-muted);
+  max-width: 7.5rem;
+  line-height: 1.25;
+}
+
+.admin-live-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55);
+  animation: admin-live-pulse 1.8s ease-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes admin-live-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+  }
+}
+
+.portal-metric-card--live {
+  grid-column: 1 / -1;
+  max-width: 18rem;
+}
+
+.portal-metric-card--live .portal-metric-key {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .admin-dash__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

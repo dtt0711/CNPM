@@ -24,6 +24,10 @@ public interface IPlatformRepository
 
     Task<AnalyticsDevice> GetOrCreateAnalyticsDeviceAsync(string deviceKey, CancellationToken ct = default);
 
+    Task TouchAnalyticsDeviceAsync(string deviceKeyHash, CancellationToken ct = default);
+
+    Task<int> CountAnalyticsDevicesSeenSinceAsync(DateTimeOffset since, CancellationToken ct = default);
+
     Task<AnalyticsSession?> GetAnalyticsSessionAsync(Guid sessionId, CancellationToken ct = default);
 
     Task AddAnalyticsSessionAsync(AnalyticsSession session, CancellationToken ct = default);

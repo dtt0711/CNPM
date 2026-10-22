@@ -4,13 +4,29 @@ import type { AnalyticsHourlyMetricDto } from "../../api/types";
 
 export default function AdminAnalytics() {
   const [hourly, setHourly] = useState<AnalyticsHourlyMetricDto[]>([]);
+  const [activeDevices, setActiveDevices] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void api
-      .analyticsSummary()
-      .then((res) => setHourly(res.hourly))
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"));
+    let cancelled = false;
+    const load = () => {
+      void api
+        .analyticsSummary()
+        .then((res) => {
+          if (cancelled) return;
+          setHourly(res.hourly);
+          setActiveDevices(res.activeDevices);
+        })
+        .catch((err) => {
+          if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load");
+        });
+    };
+    load();
+    const timer = window.setInterval(load, 15_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
   }, []);
 
   const totals = useMemo(() => {
@@ -50,8 +66,16 @@ export default function AdminAnalytics() {
         </button>
       </div>
       <div className="portal-metrics">
+        <div className="portal-metric-card portal-metric-card--live">
+          <span className="portal-metric-key">
+            <span className="admin-live-dot" aria-hidden="true" />
+            Thiết bị đang truy cập
+          </span>
+          <span className="portal-metric-value">{activeDevices ?? "—"}</span>
+          <span className="portal-muted">Ping trong 3 phút gần nhất</span>
+        </div>
         {totals.length === 0 ? (
-          <p className="portal-muted">No metrics yet.</p>
+          <p className="portal-muted">No event metrics yet.</p>
         ) : (
           totals.map(([key, count]) => (
             <div key={key} className="portal-metric-card">

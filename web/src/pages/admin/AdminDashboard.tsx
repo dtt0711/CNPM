@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { api } from "../../api/client";
 
 const TILES = [
   {
@@ -40,6 +42,28 @@ const TILES = [
 ] as const;
 
 export default function AdminDashboard() {
+  const [activeDevices, setActiveDevices] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      void api
+        .analyticsSummary()
+        .then((res) => {
+          if (!cancelled) setActiveDevices(res.activeDevices);
+        })
+        .catch(() => {
+          if (!cancelled) setActiveDevices(null);
+        });
+    };
+    load();
+    const timer = window.setInterval(load, 15_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, []);
+
   return (
     <div className="admin-dash">
       <section className="admin-dash__hero portal-card">
@@ -50,9 +74,16 @@ export default function AdminDashboard() {
             Chỉnh sửa địa điểm, theo dõi audio và xem analytics cho tour audio đa ngôn ngữ.
           </p>
         </div>
-        <Link to="/admin/places" className="btn btn--primary">
-          Mở Places
-        </Link>
+        <div className="admin-dash__hero-aside">
+          <Link to="/admin/analytics" className="admin-dash__live" title="Cập nhật mỗi 15 giây">
+            <span className="admin-live-dot" aria-hidden="true" />
+            <span className="admin-dash__live-count">{activeDevices ?? "—"}</span>
+            <span className="admin-dash__live-label">thiết bị đang truy cập</span>
+          </Link>
+          <Link to="/admin/places" className="btn btn--primary">
+            Mở Places
+          </Link>
+        </div>
       </section>
 
       <div className="admin-dash__grid">

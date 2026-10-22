@@ -6,6 +6,8 @@ public interface IAnalyticsService
 {
     Task CollectAsync(AnalyticsCollectRequest request, CancellationToken ct = default);
 
+    Task RecordPresenceAsync(string deviceId, CancellationToken ct = default);
+
     Task<AnalyticsAdminSummaryDto> GetAdminSummaryAsync(CancellationToken ct = default);
 
     Task<string> ExportCsvAsync(CancellationToken ct = default);
