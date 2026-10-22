@@ -76,10 +76,13 @@ public static class DependencyInjection
 
     private static void AddPersistence(IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("Default")
-            ?? "Server=.;Database=TourismHcm;Trusted_Connection=True;TrustServerCertificate=True;";
-
-        services.AddDbContext<TourismHcmDbContext>(options => options.UseSqlServer(connectionString));
+        services.AddDbContext<TourismHcmDbContext>((sp, options) =>
+        {
+            var connectionString = sp.GetRequiredService<IConfiguration>().GetConnectionString("Default")
+                ?? configuration.GetConnectionString("Default")
+                ?? "Server=.;Database=TourismHcm;Trusted_Connection=True;TrustServerCertificate=True;";
+            options.UseSqlServer(connectionString);
+        });
     }
 
     /// <summary>

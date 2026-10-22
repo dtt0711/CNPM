@@ -17,13 +17,13 @@ env:
 jobs:
   deploy:
     name: Deploy production
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: production
     permissions:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Resolve image tag from release tag
         id: meta
@@ -49,7 +49,7 @@ jobs:
           docker push ${{ env.IMAGE_WEB }}:${{ steps.meta.outputs.image_tag }}
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "10.0.x"
 

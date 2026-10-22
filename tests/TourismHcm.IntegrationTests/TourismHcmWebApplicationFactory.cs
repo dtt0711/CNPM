@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Testcontainers.MsSql;
 using TourismHcm.Application.Abstractions.Providers;
@@ -36,6 +37,7 @@ public sealed class TourismHcmWebApplicationFactory : WebApplicationFactory<Prog
     private MsSqlContainer? _sql;
     private string? _connectionString;
     private bool _seeded;
+    private readonly Dictionary<string, string?> _previousEnv = [];
 
     public bool DatabaseAvailable { get; private set; }
 
@@ -49,6 +51,13 @@ public sealed class TourismHcmWebApplicationFactory : WebApplicationFactory<Prog
             using var startup = new CancellationTokenSource(TimeSpan.FromMinutes(3));
             await _sql.StartAsync(startup.Token);
             _connectionString = _sql.GetConnectionString();
+            // WebApplication.CreateBuilder reads env vars before AddInfrastructure captures
+            // ConnectionStrings:Default. appsettings.json stores "" so the in-memory WAF
+            // overlay is too late unless these are set first.
+            SetEnvironment("ConnectionStrings__Default", _connectionString);
+            SetEnvironment("Jwt__SigningKey", SigningKey);
+            SetEnvironment("Admin__Email", AdminEmail);
+            SetEnvironment("Admin__Password", AdminPassword);
             DatabaseAvailable = true;
         }
         catch (Exception ex)
@@ -64,6 +73,11 @@ public sealed class TourismHcmWebApplicationFactory : WebApplicationFactory<Prog
         if (_sql is not null)
         {
             await _sql.DisposeAsync();
+        }
+
+        foreach (var (key, value) in _previousEnv)
+        {
+            Environment.SetEnvironmentVariable(key, value);
         }
     }
 
@@ -112,6 +126,10 @@ public sealed class TourismHcmWebApplicationFactory : WebApplicationFactory<Prog
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+        builder.UseSetting("ConnectionStrings:Default", _connectionString ?? string.Empty);
+        builder.UseSetting("Jwt:SigningKey", SigningKey);
+        builder.UseSetting("Admin:Email", AdminEmail);
+        builder.UseSetting("Admin:Password", AdminPassword);
         builder.ConfigureAppConfiguration((_, config) =>
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
@@ -132,6 +150,26 @@ public sealed class TourismHcmWebApplicationFactory : WebApplicationFactory<Prog
                 ["AudioStorage:PublicBaseUrl"] = "/audio",
             });
         });
+        builder.ConfigureServices(services =>
+        {
+            if (string.IsNullOrWhiteSpace(_connectionString))
+            {
+                return;
+            }
+
+            services.RemoveAll<DbContextOptions<TourismHcmDbContext>>();
+            services.AddDbContext<TourismHcmDbContext>(options => options.UseSqlServer(_connectionString));
+        });
+    }
+
+    private void SetEnvironment(string key, string value)
+    {
+        if (!_previousEnv.ContainsKey(key))
+        {
+            _previousEnv[key] = Environment.GetEnvironmentVariable(key);
+        }
+
+        Environment.SetEnvironmentVariable(key, value);
     }
 
     private async Task EnsureSeededAsync()

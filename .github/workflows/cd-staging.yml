@@ -16,14 +16,14 @@ env:
 jobs:
   build-push:
     name: Build and push
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
     outputs:
       sha: ${{ steps.meta.outputs.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set image tag
         id: meta
@@ -59,13 +59,13 @@ jobs:
   migrate-deploy:
     name: Migrate and deploy staging
     needs: build-push
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: staging
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "10.0.x"
 
