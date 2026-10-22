@@ -5,6 +5,7 @@ using System.Text.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,7 +51,12 @@ public sealed class TourismHcmWebApplicationFactory : WebApplicationFactory<Prog
             _sql = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();
             using var startup = new CancellationTokenSource(TimeSpan.FromMinutes(3));
             await _sql.StartAsync(startup.Token);
-            _connectionString = _sql.GetConnectionString();
+            // Testcontainers defaults to Initial Catalog=master. EnsureDeletedAsync then
+            // runs ALTER DATABASE [master] SET SINGLE_USER, which SQL Server rejects.
+            _connectionString = new SqlConnectionStringBuilder(_sql.GetConnectionString())
+            {
+                InitialCatalog = "TourismHcmIntegration",
+            }.ConnectionString;
             // WebApplication.CreateBuilder reads env vars before AddInfrastructure captures
             // ConnectionStrings:Default. appsettings.json stores "" so the in-memory WAF
             // overlay is too late unless these are set first.
@@ -190,8 +196,8 @@ public sealed class TourismHcmWebApplicationFactory : WebApplicationFactory<Prog
             using var scope = Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<TourismHcmDbContext>();
 
-            // Program.cs calls MigrateAsync, but this repo has no EF migrations, so that only
-            // creates an empty database. Rebuild the schema from the current model, then seed.
+            // Fresh container + named database: drop leftover schema if present, then create
+            // from the current model (MigrateAsync on Testing can leave an empty catalog).
             await db.Database.EnsureDeletedAsync();
             await db.Database.EnsureCreatedAsync();
 
